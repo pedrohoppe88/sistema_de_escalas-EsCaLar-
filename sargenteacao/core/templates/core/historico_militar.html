@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Histórico do Militar</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+
+    <h3>🎖️ Histórico de Serviços</h3>
+    <h5 class="text-muted">{{ militar.nome }}</h5>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card text-bg-primary mb-3">
+                <div class="card-body">
+                    <h6>Total de Serviços</h6>
+                    <h3>{{ total_servicos }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-bg-success mb-3">
+                <div class="card-body">
+                    <h6>Serviços no Mês</h6>
+                    <h3>{{ total_mes }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-bg-secondary mb-3">
+                <div class="card-body">
+                    <h6>Último Serviço</h6>
+                    <h5>
+                        {% if ultimo_servico %}
+                            {{ ultimo_servico.data|date:"d/m/Y" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-hover mt-4">
+        <thead class="table-dark">
+            <tr>
+                <th>Data</th>
+                <th>Registrado por</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for servico in servicos %}
+                <tr>
+                    <td>{{ servico.data|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if servico.registrado_por %}
+                            {{ servico.registrado_por.username }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="2" class="text-center">Nenhum serviço registrado</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{% url 'efetivo_do_dia' %}" class="btn btn-secondary mt-3">
+        ← Voltar
+    </a>
+
+    <a href="{% url 'relatorio_mensal_militar_pdf' militar.id 2025 1 %}"
+   class="btn btn-danger">
+   📄 Gerar PDF do mês
+</a>
+
+    <td>
+    <a href="{% url 'historico_militar' item.militar.id %}">
+        {{ item.militar.nome }}
+    </a>
+</td>
+
+</div>
+
+</body>
+</html>

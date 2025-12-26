@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Efetivo do Dia</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">🪖 Efetivo do Dia</h2>
+
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Militar</th>
+                <th>Status</th>
+                <th>Dias de Folga</th>
+                <th>Situação</th>
+                <th>Motivo</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for item in efetivo %}
+            <tr
+                {% if item.status == 'INAPTO' or item.status == 'BLOQUEADO' %}
+                    class="table-danger"
+                {% elif item.status == 'JÁ ESCALADO' %}
+                    class="table-secondary"
+                {% elif item.status == 'BAIXA' %}
+                    class="table-warning"
+                {% elif item.status == 'NORMAL' %}
+                    class="table-success"
+                {% elif item.status == 'ALTA' or item.status == 'PRIMEIRO SERVIÇO' %}
+                    class="table-primary"
+                {% endif %}
+            >
+                <!-- Militar -->
+                <td>
+                    <strong>{{ item.militar.nome }}</strong>
+                </td>
+
+                <!-- Status -->
+                <td>
+                    {% if item.status == 'JÁ ESCALADO' %}
+                        <span class="badge bg-primary">JÁ ESCALADO</span>
+                    {% elif item.status == 'PRIMEIRO SERVIÇO' %}
+                        <span class="badge bg-info text-dark">PRIMEIRO SERVIÇO</span>
+                    {% elif item.status == 'ALTA' %}
+                        <span class="badge bg-success">ALTA</span>
+                    {% elif item.status == 'NORMAL' %}
+                        <span class="badge bg-warning text-dark">NORMAL</span>
+                    {% elif item.status == 'BAIXA' %}
+                        <span class="badge bg-danger">BAIXA</span>
+                    {% else %}
+                        <span class="badge bg-dark">{{ item.status }}</span>
+                    {% endif %}
+                </td>
+
+                <!-- Dias de Folga -->
+                <td class="text-center">
+                    {% if item.dias_folga is not None %}
+                        {{ item.dias_folga }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+
+                <!-- Situação -->
+                <td>
+                    {% if item.apto %}
+                        <span class="badge bg-success">Apto</span>
+                    {% else %}
+                        <span class="badge bg-danger">Não Apto</span>
+                    {% endif %}
+                </td>
+
+                <!-- Motivo -->
+                <td>
+                    {{ item.motivo }}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{% url 'registrar_servico' %}" class="btn btn-primary">
+        ➕ Registrar Serviço
+    </a>
+
+    <a href="{% url 'aditamento_pdf' %}"
+   class="btn btn-primary mb-3">
+   📄 Gerar Aditamento (PDF)
+</a>
+
+{% if request.user.groups.all.0.name == 'SARGENTEANTE' %}
+    <a href="{% url 'aditamento_pdf' %}"
+       class="btn btn-primary mb-3">
+       📄 Gerar Aditamento (PDF)
+    </a>
+{% endif %}
+
+</div>
+
+</body>
+</html>

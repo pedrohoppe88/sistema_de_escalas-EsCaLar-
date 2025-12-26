@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial; }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 6px; }
+    </style>
+</head>
+<body>
+
+<h1>ADITAMENTO DE SERVIÇO</h1>
+<p><strong>Data:</strong> {{ data|date:"d/m/Y" }}</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Graduação</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for servico in servicos %}
+        <tr>
+            <td>{{ servico.militar.nome }}</td>
+            <td>{{ servico.militar.graduacao }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p style="margin-top:40px;">
+    _______________________________<br>
+    Sargenteante
+</p>
+
+</body>
+</html>
