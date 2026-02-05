@@ -532,8 +532,7 @@ def efetivo_do_dia(request):
 
     militares_disponiveis = Militar.objects.filter(
         ativo=True
-    ).exclude(
-        id__in=afastados_ids
+    ).exclude( 
     )
 
     data = {

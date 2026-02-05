@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Sistema de Sargenteação</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bars"></i> Menu</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'dashboard' %}" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a href="{% url 'efetivo_do_dia' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-users"></i> Efetivo do Dia
+                    </a>
+                    <a href="{% url 'registrar_servico' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-plus-circle"></i> Registrar Serviço
+                    </a>
+                    <a href="{% url 'aditamento_pdf' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-pdf"></i> Gerar Aditamento
+                    </a>
+                    {% if request.user.groups.all.0.name == 'ADMIN' %}
+                    <a href="{% url 'admin_user_management' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user-cog"></i> Gerenciar Usuários
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'logout' %}" class="list-group-item list-group-item-action text-danger">
+                        <i class="fas fa-sign-out-alt"></i> Sair
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+                <small class="text-muted">Hoje: {{ hoje|date:"d/m/Y" }}</small>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Total Militares</h5>
+                                    <h2>{{ total_militares }}</h2>
+                                </div>
+                                <i class="fas fa-users fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Aptos Hoje</h5>
+                                    <h2>{{ militares_aptos }}</h2>
+                                </div>
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Afastados</h5>
+                                    <h2>{{ militares_afastados }}</h2>
+                                </div>
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title">Serviços Hoje</h5>
+                                    <h2>{{ servicos_hoje }}</h2>
+                                </div>
+                                <i class="fas fa-calendar-check fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-bolt"></i> Ações Rápidas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <a href="{% url 'efetivo_do_dia' %}" class="btn btn-outline-primary btn-lg w-100">
+                                        <i class="fas fa-users"></i><br>
+                                        Ver Efetivo
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="{% url 'registrar_servico' %}" class="btn btn-outline-success btn-lg w-100">
+                                        <i class="fas fa-plus-circle"></i><br>
+                                        Registrar Serviço
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="{% url 'aditamento_pdf' %}" class="btn btn-outline-info btn-lg w-100">
+                                        <i class="fas fa-file-pdf"></i><br>
+                                        Gerar PDF
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="{% url 'admin_user_management' %}" class="btn btn-outline-secondary btn-lg w-100">
+                                        <i class="fas fa-user-cog"></i><br>
+                                        Gerenciar Usuários
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-clock"></i> Atividades Recentes</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Funcionalidade em desenvolvimento...</p>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-circle text-success"></i> Sistema inicializado</li>
+                                <li><i class="fas fa-circle text-info"></i> Dashboard criado</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
