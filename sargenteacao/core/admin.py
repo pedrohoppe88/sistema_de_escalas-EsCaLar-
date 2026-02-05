@@ -1,8 +1,7 @@
 from django.contrib import admin
-from django.contrib.auth.models import User, Group
-from django.contrib.auth.admin import UserAdmin, GroupAdmin
+from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin
 from .models import Militar, Afastamento, Servico
-
 # Unregister the default User admin before registering custom one
 if User in admin.site._registry:
     admin.site.unregister(User)
@@ -33,18 +32,28 @@ class ServicoAdmin(admin.ModelAdmin):
 
 # Custom UserAdmin to manage permissions
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
-    search_fields = ('username', 'first_name', 'last_name', 'email')
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'is_staff',
+        'is_active',
+        'date_joined'
+    )
+    list_filter = (
+        'is_staff',
+        'is_superuser',
+        'is_active',
+        'groups'
+    )
+    search_fields = (
+        'username',
+        'first_name',
+        'last_name',
+        'email'
+    )
     ordering = ('username',)
-
-    fieldsets = UserAdmin.fieldsets + (
-        ('Permissões Adicionais', {'fields': ('groups', 'user_permissions')}),
-    )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Permissões Adicionais', {'fields': ('groups', 'user_permissions')}),
-    )
 
 # Register custom User and Group admin
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(Group, GroupAdmin)

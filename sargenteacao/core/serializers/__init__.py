@@ -1,0 +1,2 @@
+from .militar_serializer import MilitarSerializer
+from .afastamento_serializer import AfastamentoSerializer

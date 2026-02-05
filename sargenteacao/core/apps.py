@@ -1,5 +1,4 @@
 from django.apps import AppConfig
-from django.core.signals import app_ready
 
 
 class CoreConfig(AppConfig):
@@ -7,10 +6,10 @@ class CoreConfig(AppConfig):
     name = 'core'
 
     def ready(self):
-        # Connect signal to unregister User admin after admin autodiscovery
-        app_ready.connect(self.unregister_user_admin, sender=self)
+        # Unregister the default User admin to allow custom registration
+        self.unregister_user_admin()
 
-    def unregister_user_admin(self, sender, **kwargs):
+    def unregister_user_admin(self):
         # Unregister the default User admin to allow custom registration
         from django.contrib import admin
         from django.contrib.auth.models import User
