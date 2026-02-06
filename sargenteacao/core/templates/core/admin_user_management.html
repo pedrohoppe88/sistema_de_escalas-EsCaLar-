@@ -9,6 +9,14 @@
     <div class="row">
         <div class="col-md-8">
             <h2>Usuários</h2>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
             <table class="table table-striped">
                 <thead>
                     <tr>
@@ -20,25 +28,25 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in users %}
+                    {% for item in users %}
                     <tr>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.email }}</td>
+                        <td>{{ item.user.username }}</td>
+                        <td>{{ item.user.email }}</td>
                         <td>
-                            {% for group in user.groups.all %}
-                                {{ group.name }}{% if not forloop.last %}, {% endif %}
+                            {% for group_name in item.groups %}
+                                {{ group_name }}{% if not forloop.last %}, {% endif %}
                             {% endfor %}
                         </td>
                         <td>
-                            {% if user.is_active %}
+                            {% if item.user.is_active %}
                                 <span class="badge bg-success">Ativo</span>
                             {% else %}
                                 <span class="badge bg-danger">Inativo</span>
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'admin:auth_user_change' user.id %}" class="btn btn-sm btn-primary">Editar</a>
-                            <a href="{% url 'admin:auth_user_delete' user.id %}" class="btn btn-sm btn-danger">Excluir</a>
+                            <a href="{% url 'admin:auth_user_change' item.user.id %}" class="btn btn-sm btn-primary">Editar</a>
+                            <a href="{% url 'admin:auth_user_delete' item.user.id %}" class="btn btn-sm btn-danger">Excluir</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -58,7 +66,24 @@
             </ul>
 
             <div class="mt-3">
-                <a href="{% url 'admin:auth_user_add' %}" class="btn btn-success">Adicionar Usuário</a>
+                <form method="post" class="card card-body mb-3">
+                    {% csrf_token %}
+                    <h5 class="card-title">Adicionar Usuário Rápido</h5>
+                    <div class="mb-2">
+                        <label class="form-label">Nome de usuário</label>
+                        <input type="text" name="novo_username" class="form-control" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Graduação</label>
+                        <input type="text" name="graduacao" class="form-control" value="SD">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Subunidade</label>
+                        <input type="text" name="subunidade" class="form-control" value="Geral">
+                    </div>
+                    <button type="submit" class="btn btn-success">Adicionar</button>
+                </form>
+                <a href="{% url 'admin:auth_user_add' %}" class="btn btn-outline-success">Adicionar via Admin</a>
                 <a href="{% url 'admin:auth_group_add' %}" class="btn btn-info">Adicionar Grupo</a>
             </div>
         </div>

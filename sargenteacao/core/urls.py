@@ -15,6 +15,7 @@ urlpatterns = [
     path('efetivo/', views.efetivo_do_dia, name='efetivo_do_dia'),
     path('registrar-servico/', views.registrar_servico, name='registrar_servico'),
     path('aditamento/pdf/', views.gerar_aditamento_pdf, name='aditamento_pdf'),
+    path('aditamento/pdf/<int:ano>/<int:mes>/<int:dia>/', views.gerar_aditamento_pdf_por_data, name='aditamento_pdf_por_data'),
 
     path(
         'militar/<int:militar_id>/historico/',
@@ -32,6 +33,8 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
+
+    path('dashboard/', views.dashboard, name='dashboard'),
 
     # Administração
     path(

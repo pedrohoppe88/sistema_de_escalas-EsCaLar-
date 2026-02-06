@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .services import calcular_efetivo_do_dia
+from .services import calcular_efetivo_do_dia, calcular_efetivo_por_data
 from datetime import date
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -73,6 +73,8 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
+                if pode_gerenciar_usuarios(user) or user.is_superuser:
+                    return redirect('dashboard')
                 return redirect('efetivo_do_dia')
             else:
                 messages.error(request, 'Credenciais inválidas.')
@@ -151,6 +153,23 @@ def registrar_servico(request):
         'militares': militares_aptos
     })
     
+@login_required
+def dashboard(request):
+    hoje = date.today()
+    total_militares = Militar.objects.count()
+    total_afastamentos_hoje = Afastamento.objects.filter(
+        data_inicio__lte=hoje,
+        data_fim__gte=hoje
+    ).count()
+    total_servicos_hoje = Servico.objects.filter(data=hoje).count()
+    context = {
+        'total_militares': total_militares,
+        'total_afastamentos_hoje': total_afastamentos_hoje,
+        'total_servicos_hoje': total_servicos_hoje,
+        'hoje': hoje,
+    }
+    return render(request, 'core/dashboard.html', context)
+    
 def gerar_aditamento_pdf(request):
     hoje = date.today()
 
@@ -215,13 +234,21 @@ def registrar_servico(request):
     if not pode_registrar_servico(request.user):
         return HttpResponseForbidden("Você não tem permissão para registrar serviço.")
 
-    hoje = date.today()
+    from datetime import datetime
+    from django.urls import reverse
+
+    data_str = request.GET.get('data') if request.method == 'GET' else request.POST.get('data')
+    try:
+        data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else date.today()
+    except ValueError:
+        data_selecionada = date.today()
 
     # Usa o Efetivo do Dia (regra centralizada)
-    efetivo = calcular_efetivo_do_dia()
+    efetivo = calcular_efetivo_por_data(data_selecionada)
 
     # Apenas militares APTOS
     militares_aptos = [e for e in efetivo if e['apto']]
+    militares_nao_aptos = [e for e in efetivo if not e['apto']]
 
     if request.method == 'POST':
         selecionados = request.POST.getlist('militares')
@@ -232,7 +259,7 @@ def registrar_servico(request):
             if str(militar.id) in selecionados:
 
                 # ❌ Regra 1: não duplicar serviço no mesmo dia
-                if Servico.objects.filter(militar=militar, data=hoje).exists():
+                if Servico.objects.filter(militar=militar, data=data_selecionada).exists():
                     continue
 
                 # ❌ Regra 2: garantir que é apto
@@ -242,14 +269,17 @@ def registrar_servico(request):
                 # ✅ Registrar serviço
                 Servico.objects.create(
                     militar=militar,
-                    data=hoje
+                    data=data_selecionada,
+                    registrado_por=request.user
                 )
 
         messages.success(request, '✅ Serviço registrado com sucesso')
-        return redirect('efetivo_do_dia')
+        return redirect(f"{reverse('registrar_servico')}?data={data_selecionada.isoformat()}")
 
     return render(request, 'core/registrar_servico.html', {
-        'militares': militares_aptos
+        'militares': militares_aptos,
+        'nao_aptos': militares_nao_aptos,
+        'data_selecionada': data_selecionada
     })
 
 @login_required
@@ -306,6 +336,69 @@ def gerar_aditamento_pdf(request):
                 y = altura - 50
 
     # 🖊️ Rodapé
+    y -= 40
+    c.setFont("Helvetica", 9)
+    c.drawString(50, y, "Sargenteação / Administração do Serviço")
+
+    c.showPage()
+    c.save()
+
+    return response
+    
+@login_required
+def gerar_aditamento_pdf_por_data(request, ano, mes, dia):
+    if not pode_gerar_relatorios(request.user):
+        return HttpResponseForbidden("Você não tem permissão para gerar o aditamento.")
+
+    from datetime import date as _date
+    try:
+        data_ref = _date(year=ano, month=mes, day=dia)
+    except ValueError:
+        data_ref = date.today()
+
+    servicos = Servico.objects.filter(data=data_ref).select_related('militar')
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="aditamento_{data_ref.strftime("%d_%m_%Y")}.pdf"'
+    )
+
+    c = canvas.Canvas(response, pagesize=A4)
+    largura, altura = A4
+
+    y = altura - 50
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(largura / 2, y, "ADITAMENTO AO BOLETIM INTERNO")
+    y -= 25
+
+    c.setFont("Helvetica", 11)
+    c.drawCentredString(
+        largura / 2, y,
+        f"Serviço do dia {data_ref.strftime('%d/%m/%Y')}"
+    )
+
+    y -= 40
+
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(50, y, "MILITARES ESCALADOS:")
+    y -= 20
+
+    c.setFont("Helvetica", 10)
+
+    if not servicos.exists():
+        c.drawString(50, y, "Nenhum militar escalado.")
+    else:
+        for idx, servico in enumerate(servicos, start=1):
+            texto = f"{idx}. {servico.militar.nome}"
+            c.drawString(60, y, texto)
+            y -= 18
+
+            if y < 50:
+                c.showPage()
+                c.setFont("Helvetica", 10)
+                y = altura - 50
+
     y -= 40
     c.setFont("Helvetica", 9)
     c.drawString(50, y, "Sargenteação / Administração do Serviço")
@@ -420,7 +513,25 @@ def admin_user_management(request):
         return HttpResponseForbidden("Você não tem permissão para gerenciar usuários.")
 
     from django.contrib.auth.models import User, Group
-    from .utils.permissoes import get_all_groups_with_counts, get_user_role_display
+    from .utils.permissoes import get_all_groups_with_counts, get_user_role_display, assign_default_group
+    if request.method == 'POST':
+        novo_username = request.POST.get('novo_username', '').strip()
+        graduacao = request.POST.get('graduacao', 'SD').strip()
+        subunidade = request.POST.get('subunidade', 'Geral').strip()
+        if novo_username:
+            user, created = User.objects.get_or_create(username=novo_username)
+            if created:
+                user.set_unusable_password()
+                user.is_active = True
+                user.save()
+                assign_default_group(user)
+                Militar.objects.get_or_create(
+                    nome=novo_username,
+                    defaults={'graduacao': graduacao, 'subunidade': subunidade, 'ativo': True}
+                )
+                messages.success(request, f'Usuário {novo_username} criado')
+            else:
+                messages.info(request, f'Usuário {novo_username} já existe')
 
     users = User.objects.all().select_related()
     groups_data = get_all_groups_with_counts()

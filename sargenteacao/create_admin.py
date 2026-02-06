@@ -11,6 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sargenteacao.settings')
 django.setup()
 
 from django.contrib.auth.models import User, Group
+from core.utils.permissoes import assign_default_group
 from core.models import Militar
 
 def create_admin_user():
@@ -54,6 +55,30 @@ def create_admin_user():
     print(f"   Email: admin@sistema.com")
     print(f"   Groups: {[g.name for g in admin_user.groups.all()]}")
     print(f"   Militar instance: {'Created' if militar_created else 'Already exists'}")
+def create_bulk_users():
+    base_names = [
+        'militar_01', 'militar_02', 'militar_03', 'militar_04', 'militar_05',
+        'militar_06', 'militar_07', 'militar_08', 'militar_09', 'militar_10'
+    ]
+    created_count = 0
+    for uname in base_names:
+        user, created = User.objects.get_or_create(username=uname)
+        if created:
+            user.set_unusable_password()
+            user.is_active = True
+            user.save()
+            assign_default_group(user)
+            Militar.objects.get_or_create(
+                nome=uname,
+                defaults={
+                    'graduacao': 'SD',
+                    'subunidade': 'Geral',
+                    'ativo': True
+                }
+            )
+            created_count += 1
+    print(f"✅ Bulk users created: {created_count} new users")
 
-if __name__ == '__main__':
+
     create_admin_user()
+    create_bulk_users()

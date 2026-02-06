@@ -7,11 +7,29 @@
 </head>
 <body class="container mt-4">
 
-<h2>📋 Registrar Serviço do Dia</h2>
+<h2>📋 Registrar Serviço do Dia {{ data_selecionada|date:"d/m/Y" }}</h2>
 <p>Selecione apenas os militares aptos</p>
+
+<form method="get" class="mb-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label for="data" class="form-label">Data do Aditamento</label>
+            <input type="date" id="data" name="data" class="form-control" value="{{ data_selecionada|date:'Y-m-d' }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-primary">Carregar</button>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'aditamento_pdf_por_data' data_selecionada.year data_selecionada.month data_selecionada.day %}" class="btn btn-outline-info">
+                📄 Gerar PDF
+            </a>
+        </div>
+    </div>
+    </form>
 
 <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="data" value="{{ data_selecionada|date:'Y-m-d' }}">
 
     <table class="table table-bordered table-striped">
         <thead>
@@ -21,6 +39,7 @@
                 <th>Graduação</th>
                 <th>Dias de Folga</th>
                 <th>Status</th>
+                <th>Motivo</th>
             </tr>
         </thead>
         <tbody>
@@ -41,10 +60,11 @@
                         <span class="badge bg-danger">BAIXA</span>
                     {% endif %}
                 </td>
+                <td>{{ item.motivo }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5">Nenhum militar apto hoje</td>
+                <td colspan="6">Nenhum militar apto na data selecionada</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -58,6 +78,44 @@
         ↩ Voltar
     </a>
 </form>
+
+<hr class="my-4">
+
+<h3>🚫 Não Aptos (informativo)</h3>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Graduação</th>
+            <th>Dias de Folga</th>
+            <th>Status</th>
+            <th>Motivo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in nao_aptos %}
+        <tr class="table-danger">
+            <td>{{ item.militar.nome }}</td>
+            <td>{{ item.militar.graduacao }}</td>
+            <td>
+                {% if item.dias_folga is not None %}
+                    {{ item.dias_folga }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge bg-danger">{{ item.status }}</span>
+            </td>
+            <td>{{ item.motivo }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">Nenhum militar não apto na data selecionada</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 </body>
 </html>

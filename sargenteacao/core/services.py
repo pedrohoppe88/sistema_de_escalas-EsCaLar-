@@ -12,8 +12,8 @@ STATUS_PRIMEIRO = 'PRIMEIRO SERVIÇO'
 STATUS_JA_ESCALADO = 'JÁ ESCALADO'
 
 
-def calcular_efetivo_do_dia():
-    hoje = date.today()
+def calcular_efetivo_por_data(data_referencia: date):
+    hoje = data_referencia
     ontem = hoje - timedelta(days=1)
 
     resultado = []
@@ -110,3 +110,7 @@ def calcular_efetivo_do_dia():
     )
 
     return resultado
+
+
+def calcular_efetivo_do_dia():
+    return calcular_efetivo_por_data(date.today())
