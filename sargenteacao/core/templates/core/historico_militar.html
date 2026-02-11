@@ -12,7 +12,7 @@
 <div class="container mt-4">
 
     <h3>🎖️ Histórico de Serviços</h3>
-    <h5 class="text-muted">{{ militar.nome }}</h5>
+    <h5 class="text-muted">{{ militar.nome }} — {{ mes_nome|capfirst }} / {{ ano }}</h5>
 
     <div class="row mt-4">
         <div class="col-md-4">
@@ -76,20 +76,43 @@
         </tbody>
     </table>
 
-    <a href="{% url 'efetivo_do_dia' %}" class="btn btn-secondary mt-3">
+    <a href="{% url 'ver_efetivo' %}" class="btn btn-secondary mt-3">
         ← Voltar
     </a>
 
-    <a href="{% url 'relatorio_mensal_militar_pdf' militar.id 2025 1 %}"
-   class="btn btn-danger">
-   📄 Gerar PDF do mês
-</a>
+    <form method="get" class="row g-2 align-items-end mt-3">
+        <div class="col-auto">
+            <label class="form-label">Mês</label>
+            <select name="mes" class="form-select">
+                <option value="1" {% if mes == 1 %}selected{% endif %}>1</option>
+                <option value="2" {% if mes == 2 %}selected{% endif %}>2</option>
+                <option value="3" {% if mes == 3 %}selected{% endif %}>3</option>
+                <option value="4" {% if mes == 4 %}selected{% endif %}>4</option>
+                <option value="5" {% if mes == 5 %}selected{% endif %}>5</option>
+                <option value="6" {% if mes == 6 %}selected{% endif %}>6</option>
+                <option value="7" {% if mes == 7 %}selected{% endif %}>7</option>
+                <option value="8" {% if mes == 8 %}selected{% endif %}>8</option>
+                <option value="9" {% if mes == 9 %}selected{% endif %}>9</option>
+                <option value="10" {% if mes == 10 %}selected{% endif %}>10</option>
+                <option value="11" {% if mes == 11 %}selected{% endif %}>11</option>
+                <option value="12" {% if mes == 12 %}selected{% endif %}>12</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label">Ano</label>
+            <input type="number" name="ano" class="form-control" value="{{ ano }}" min="2000" max="2100">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary">Aplicar</button>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'relatorio_mensal_militar_pdf' militar.id ano mes %}" class="btn btn-danger">
+                📄 Gerar PDF do mês
+            </a>
+        </div>
+    </form>
 
-    <td>
-    <a href="{% url 'historico_militar' item.militar.id %}">
-        {{ item.militar.nome }}
-    </a>
-</td>
+    
 
 </div>
 

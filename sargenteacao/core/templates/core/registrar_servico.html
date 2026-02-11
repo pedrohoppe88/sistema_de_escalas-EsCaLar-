@@ -12,14 +12,28 @@
 
 <form method="get" class="mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-auto">
+        <div class="col-md-3">
             <label for="data" class="form-label">Data do Aditamento</label>
             <input type="date" id="data" name="data" class="form-control" value="{{ data_selecionada|date:'Y-m-d' }}">
         </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-outline-primary">Carregar</button>
+        <div class="col-md-3">
+            <label class="form-label">Pesquisar por nome</label>
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Ex.: João">
         </div>
-        <div class="col-auto">
+        <div class="col-md-3">
+            <label class="form-label">Graduação</label>
+            <select name="graduacao" class="form-select">
+                <option value="">Todas as graduações</option>
+                {% for code,label in graduacoes %}
+                    <option value="{{ code }}" {% if graduacao == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-outline-primary w-50">Pesquisar</button>
+            <a href="{% url 'registrar_servico' %}?data={{ data_selecionada|date:'Y-m-d' }}" class="btn btn-outline-secondary w-50">Limpar</a>
+        </div>
+        <div class="col-12 mt-2">
             <a href="{% url 'aditamento_pdf_por_data' data_selecionada.year data_selecionada.month data_selecionada.day %}" class="btn btn-outline-info">
                 📄 Gerar PDF
             </a>
@@ -35,6 +49,7 @@
         <thead>
             <tr>
                 <th>Escalar</th>
+                <th>Tipo de Serviço</th>
                 <th>Nome</th>
                 <th>Graduação</th>
                 <th>Dias de Folga</th>
@@ -47,6 +62,13 @@
             <tr>
                 <td>
                     <input type="checkbox" name="militares" value="{{ item.militar.id }}">
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" name="tipo_{{ item.militar.id }}">
+                        {% for code,label in item.opcoes_tipo %}
+                            <option value="{{ code }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </td>
                 <td>{{ item.militar.nome }}</td>
                 <td>{{ item.militar.graduacao }}</td>
@@ -64,7 +86,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6">Nenhum militar apto na data selecionada</td>
+                <td colspan="7">Nenhum militar apto na data selecionada</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -74,7 +96,7 @@
         ✅ Registrar Serviço
     </button>
 
-    <a href="{% url 'efetivo_do_dia' %}" class="btn btn-secondary">
+    <a href="{% url 'ver_efetivo' %}" class="btn btn-secondary">
         ↩ Voltar
     </a>
 </form>

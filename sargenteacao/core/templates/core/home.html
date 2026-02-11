@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>EsCaLar — Página Inicial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #3a7bd5 100%);
+            background-attachment: fixed;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            overflow-x: hidden;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            padding: 50px;
+            margin-top: 50px;
+            margin-bottom: 50px;
+            backdrop-filter: blur(10px);
+            animation: fadeInUp 1s ease-out;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        h1.display-4 {
+            color: #1e3c72;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            font-weight: 700;
+            position: relative;
+        }
+        h1.display-4::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, #1e3c72, #3a7bd5);
+            border-radius: 2px;
+        }
+        .lead {
+            color: #555;
+            font-weight: 300;
+            font-size: 1.2rem;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #1e3c72, #3a7bd5);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4);
+            background: linear-gradient(45deg, #3a7bd5, #1e3c72);
+        }
+        .btn-outline-secondary {
+            color: #1e3c72;
+            border: 2px solid #1e3c72;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.4s ease;
+            background: transparent;
+        }
+        .btn-outline-secondary:hover {
+            background: linear-gradient(45deg, #1e3c72, #3a7bd5);
+            border-color: transparent;
+            color: #fff;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card-title {
+            color: #1e3c72;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+        }
+        .card-title::before {
+            content: '\f005'; /* Ícone de estrela do Font Awesome */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #3a7bd5;
+            margin-right: 10px;
+        }
+        .card-text {
+            color: #666;
+            line-height: 1.6;
+        }
+        hr {
+            border: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #1e3c72, #3a7bd5);
+            opacity: 0.7;
+        }
+        .text-muted {
+            color: #888 !important;
+        }
+        .text-center small {
+            font-size: 0.9rem;
+            font-weight: 300;
+        }
+        .d-flex.justify-content-center.gap-3 {
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+<div class="container py-5">
+    <div class="text-center">
+        <h1 class="display-4 fw-bold">EsCaLar</h1>
+        <p class="lead text-muted">Sistema de Escala e Sargenteação</p>
+        <div class="mt-4 d-flex justify-content-center gap-3">
+            <a href="{% url 'login' %}" class="btn btn-primary btn-lg">Entrar</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg">Dashboard</a>
+        </div>
+    </div>
+    <hr class="my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Bem-vindo</h5>
+                    <p class="card-text">
+                        Utilize o botão Entrar para acessar o sistema. Se já estiver autenticado e possuir permissão,
+                        você pode ir direto ao Dashboard para visualizar os principais indicadores e acessos rápidos.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="text-center mt-4 text-muted">
+        <small>&copy; {{ project_name }} — {{ project_name }} System</small>
+    </div>
+    </div>
+</body>
+</html>

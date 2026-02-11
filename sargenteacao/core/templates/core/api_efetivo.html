@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Militares — Efetivo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+
+<h2>🪖 Militares no Sistema</h2>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Pesquisar por nome">
+    </div>
+    <div class="col-md-3">
+        <select name="graduacao" class="form-select">
+            <option value="">Todas as graduações</option>
+            {% for code,label in graduacoes %}
+                <option value="{{ code }}" {% if graduacao == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100">Pesquisar</button>
+    </div>
+    <div class="col-md-2">
+        <a href="{% url 'api_efetivo' %}" class="btn btn-outline-secondary w-100">Limpar</a>
+    </div>
+</form>
+
+{% if can_manage %}
+<div class="card mb-3">
+    <div class="card-header">Novo Militar</div>
+    <div class="card-body">
+        <form method="post" action="{% url 'api_militar_novo' %}" class="row g-2">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <input type="text" name="nome" class="form-control" placeholder="Nome" required>
+            </div>
+            <div class="col-md-3">
+                <select name="graduacao" class="form-select">
+                    {% for code,label in graduacoes %}
+                        <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="subunidade" class="form-control" placeholder="Subunidade">
+            </div>
+            <div class="col-md-1 form-check">
+                <input type="checkbox" class="form-check-input" id="ativo_novo" name="ativo" checked>
+                <label class="form-check-label" for="ativo_novo">Ativo</label>
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-success w-100">Criar</button>
+            </div>
+        </form>
+    </div>
+    </div>
+{% endif %}
+
+<table class="table table-bordered table-striped align-middle">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Graduação</th>
+            <th>Subunidade</th>
+            <th>Ativo</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for m in militares %}
+        <tr>
+            <td>{{ m.id }}</td>
+            <td>{{ m.nome }}</td>
+            <td>{{ m.get_graduacao_display }}</td>
+            <td>{{ m.subunidade }}</td>
+            <td>
+                {% if m.ativo %}
+                <span class="badge bg-success">Ativo</span>
+                {% else %}
+                <span class="badge bg-danger">Inativo</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if can_manage %}
+                <details>
+                    <summary class="btn btn-sm btn-outline-secondary">Editar</summary>
+                    <form method="post" action="{% url 'api_militar_editar' m.id %}" class="mt-2">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <input type="text" name="nome" class="form-control" value="{{ m.nome }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <select name="graduacao" class="form-select">
+                                    {% for code,label in graduacoes %}
+                                        <option value="{{ code }}" {% if code == m.graduacao %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" name="subunidade" class="form-control" value="{{ m.subunidade }}">
+                            </div>
+                            <div class="col-md-2 form-check">
+                                <input type="checkbox" class="form-check-input" id="ativo_{{ m.id }}" name="ativo" {% if m.ativo %}checked{% endif %}>
+                                <label class="form-check-label" for="ativo_{{ m.id }}">Ativo</label>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-sm btn-primary w-100">Salvar</button>
+                            </div>
+                        </div>
+                    </form>
+                </details>
+                <form method="post" action="{% url 'api_militar_excluir' m.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-danger">Excluir</button>
+                </form>
+                {% endif %}
+                {% if can_reports %}
+                <a href="{% url 'historico_militar' m.id %}" class="btn btn-sm btn-outline-secondary">Histórico</a>
+                {% else %}
+                —
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center">Nenhum militar encontrado</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'dashboard' %}" class="btn btn-secondary">↩ Voltar ao Dashboard</a>
+
+</body>
+</html>

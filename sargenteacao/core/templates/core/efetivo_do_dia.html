@@ -11,7 +11,16 @@
 
 <div class="container mt-4">
 
-    <h2 class="mb-4">🪖 Efetivo do Dia</h2>
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">🪖 Efetivo</h2>
+    <form method="get" class="d-flex align-items-end gap-2">
+        <div>
+            <label for="data" class="form-label">Data</label>
+            <input type="date" id="data" name="data" class="form-control" value="{{ data_selecionada|date:'Y-m-d' }}">
+        </div>
+        <button type="submit" class="btn btn-outline-primary">Carregar</button>
+    </form>
+    </div>
 
     <table class="table table-bordered table-hover align-middle">
         <thead class="table-dark">
@@ -21,6 +30,7 @@
                 <th>Dias de Folga</th>
                 <th>Situação</th>
                 <th>Motivo</th>
+                <th>Ações</th>
             </tr>
         </thead>
 
@@ -82,6 +92,14 @@
                 <!-- Motivo -->
                 <td>
                     {{ item.motivo }}
+                </td>
+                <!-- Ações -->
+                <td class="text-nowrap">
+                    {% if can_reports %}
+                        <a href="{% url 'historico_militar' item.militar.id %}" class="btn btn-sm btn-outline-secondary">
+                            Histórico
+                        </a>
+                    {% endif %}
                 </td>
             </tr>
         {% endfor %}

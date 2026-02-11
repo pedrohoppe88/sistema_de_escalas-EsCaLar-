@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
@@ -69,6 +70,16 @@ class Afastamento(models.Model):
 
 
 class Servico(models.Model):
+    TIPOS_SERVICO = [
+        ('GUARDA', 'Guarda ao Quartel'),
+        ('PLANTAO', 'Plantão'),
+        ('PERMANENCIA', 'Permanência'),
+        ('COMANDANTE_GUARDA', 'Comandante da Guarda'),
+        ('CABO_GUARDA', 'Cabo da Guarda'),
+        ('CABO_DIA', 'Cabo de Dia'),
+        ('ADJUNTO', 'Adjunto'),
+        ('OFICIAL_DIA', 'Oficial de Dia'),
+    ]
     militar = models.ForeignKey(
         Militar,
         on_delete=models.CASCADE,
@@ -76,6 +87,12 @@ class Servico(models.Model):
     )
 
     data = models.DateField()
+
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPOS_SERVICO,
+        default='GUARDA'
+    )
 
     registrado_por = models.ForeignKey(
         User,
@@ -88,6 +105,13 @@ class Servico(models.Model):
 
     class Meta:
         unique_together = ('militar', 'data')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['data', 'tipo'],
+                condition=Q(tipo__in=['OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA']),
+                name='unique_special_role_per_day',
+            )
+        ]
         ordering = ['-data']
         verbose_name = 'Serviço'
         verbose_name_plural = 'Serviços'
@@ -110,4 +134,4 @@ class Servico(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.militar.nome} - {self.data.strftime('%d/%m/%Y')}"
+        return f"{self.militar.nome} - {self.get_tipo_display()} - {self.data.strftime('%d/%m/%Y')}"
