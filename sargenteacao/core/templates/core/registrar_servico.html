@@ -64,9 +64,11 @@
                     <input type="checkbox" name="militares" value="{{ item.militar.id }}">
                 </td>
                 <td>
-                    <select class="form-select form-select-sm" name="tipo_{{ item.militar.id }}">
+                    <select class="form-select form-select-sm" name="tipo_{{ item.militar.id }}" {% if item.todos_ocupados %}style="background-color:#f1f3f5; color:#6c757d;" title="Todas as opções ocupadas"{% endif %}>
                         {% for code,label in item.opcoes_tipo %}
-                            <option value="{{ code }}">{{ label }}</option>
+                            <option value="{{ code }}" {% if code in tipos_ocupados %}disabled{% endif %}>
+                                {{ label }}{% if code in tipos_ocupados %} — já escalado{% endif %}
+                            </option>
                         {% endfor %}
                     </select>
                 </td>
@@ -99,6 +101,9 @@
     <a href="{% url 'ver_efetivo' %}" class="btn btn-secondary">
         ↩ Voltar
     </a>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+        ↩ Voltar ao Dashboard
+    </a>
 </form>
 
 <hr class="my-4">
@@ -127,7 +132,11 @@
                 {% endif %}
             </td>
             <td>
-                <span class="badge bg-danger">{{ item.status }}</span>
+                {% if item.status == 'JÁ ESCALADO' %}
+                    <span class="badge bg-secondary">JÁ ESCALADO</span>
+                {% else %}
+                    <span class="badge bg-danger">{{ item.status }}</span>
+                {% endif %}
             </td>
             <td>{{ item.motivo }}</td>
         </tr>

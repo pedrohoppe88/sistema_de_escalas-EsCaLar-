@@ -22,6 +22,7 @@ from .models import Servico
 
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
+from django.db.models import Count, Q, IntegerField, Sum, Case, When
 from .utils.permissoes import (
     pode_registrar_servico,
     pode_gerar_relatorios,
@@ -37,6 +38,22 @@ from calendar import month_name
 # Authentication imports
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
+
+# Regras de tipos permitidos por graduação
+def tipos_permitidos_por_graduacao(grad):
+    base = ['GUARDA', 'PLANTAO', 'PERMANENCIA']
+    allowed = []
+    if grad in ('SD', 'CB'):
+        allowed.extend(base)
+    if grad == 'CB':
+        allowed.extend(['CABO_GUARDA', 'CABO_DIA'])
+    if grad == '3SG':
+        allowed.append('COMANDANTE_GUARDA')
+    if grad in ('2SG', '1SG'):
+        allowed.append('ADJUNTO')
+    if grad in ('1TEN', '2TEN'):
+        allowed.append('OFICIAL_DIA')
+    return allowed
 from django.forms import Form, CharField, PasswordInput, EmailInput, Select, TextInput
 
 # Login Form
@@ -258,22 +275,9 @@ def registrar_servico(request):
             if graduacao and e['militar'].graduacao != graduacao:
                 continue
             grad = e['militar'].graduacao
-            base = [
-                ('GUARDA', 'Guarda ao Quartel'),
-                ('PLANTAO', 'Plantão'),
-                ('PERMANENCIA', 'Permanência'),
-            ]
-            extras = []
-            if grad == '3SG':
-                extras.append(('COMANDANTE_GUARDA', 'Comandante da Guarda'))
-            if grad == 'CB':
-                extras.append(('CABO_GUARDA', 'Cabo da Guarda'))
-                extras.append(('CABO_DIA', 'Cabo de Dia'))
-            if grad in ('2SG', '1SG'):
-                extras.append(('ADJUNTO', 'Adjunto'))
-            if grad in ('1TEN', '2TEN'):
-                extras.append(('OFICIAL_DIA', 'Oficial de Dia'))
-            e['opcoes_tipo'] = base + extras
+            label_map = dict(Servico.TIPOS_SERVICO)
+            allowed_codes = tipos_permitidos_por_graduacao(grad)
+            e['opcoes_tipo'] = [(code, label_map[code]) for code in allowed_codes]
             militares_aptos.append(e)
     militares_nao_aptos = [
         e for e in efetivo
@@ -301,18 +305,7 @@ def registrar_servico(request):
                 # ✅ Registrar serviço
                 tipo = request.POST.get(f'tipo_{militar.id}', 'GUARDA')
                 grad = militar.graduacao
-                allowed = [
-                    'GUARDA', 'PLANTAO', 'PERMANENCIA'
-                ]
-                if grad == '3SG':
-                    allowed.append('COMANDANTE_GUARDA')
-                if grad == 'CB':
-                    allowed.append('CABO_GUARDA')
-                    allowed.append('CABO_DIA')
-                if grad in ('2SG', '1SG'):
-                    allowed.append('ADJUNTO')
-                if grad in ('1TEN', '2TEN'):
-                    allowed.append('OFICIAL_DIA')
+                allowed = tipos_permitidos_por_graduacao(grad)
                 if tipo not in allowed:
                     continue
                 # ❌ Regra 3: cargos especiais são únicos por dia
@@ -330,13 +323,137 @@ def registrar_servico(request):
         messages.success(request, '✅ Serviço registrado com sucesso')
         return redirect(f"{reverse('registrar_servico')}?data={data_selecionada.isoformat()}")
 
+    especiais = {'OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA'}
+    tipos_ocupados = list(
+        Servico.objects.filter(data=data_selecionada, tipo__in=especiais).values_list('tipo', flat=True)
+    )
+
+    # Marcar se todas as opções disponíveis para o militar estão ocupadas
+    for e in militares_aptos:
+        codes = [code for code, _label in e.get('opcoes_tipo', [])]
+        e['todos_ocupados'] = all(code in tipos_ocupados for code in codes) if codes else False
+
     return render(request, 'core/registrar_servico.html', {
         'militares': militares_aptos,
         'nao_aptos': militares_nao_aptos,
         'data_selecionada': data_selecionada,
         'graduacoes': Militar.GRADUACOES_CHOICES,
         'q': q,
-        'graduacao': graduacao
+        'graduacao': graduacao,
+        'tipos_ocupados': tipos_ocupados
+    })
+
+@login_required
+def editar_servicos(request):
+    if not pode_registrar_servico(request.user):
+        return HttpResponseForbidden("Você não tem permissão para editar serviço.")
+    from datetime import datetime
+    data_str = request.GET.get('data')
+    try:
+        data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else date.today()
+    except ValueError:
+        data_selecionada = date.today()
+    return render(request, 'core/editar_servicos.html', {
+        'data_selecionada': data_selecionada,
+    })
+
+@login_required
+def editar_servico(request):
+    if not pode_registrar_servico(request.user):
+        return HttpResponseForbidden("Você não tem permissão para editar serviço.")
+    from datetime import datetime
+    from django.urls import reverse
+    data_str = request.GET.get('data') if request.method == 'GET' else request.POST.get('data')
+    try:
+        data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date() if data_str else date.today()
+    except ValueError:
+        data_selecionada = date.today()
+    if data_selecionada < date.today():
+        messages.warning(request, 'Edição permitida somente para hoje e próximos dias.')
+        return redirect(f"{reverse('editar_servicos')}?data={date.today().isoformat()}")
+    efetivo = calcular_efetivo_por_data(data_selecionada)
+    militares_aptos = [e for e in efetivo if e['apto']]
+    opcoes_tipo_por_militar = {}
+    label_map = dict(Servico.TIPOS_SERVICO)
+    for m in Militar.objects.filter(ativo=True):
+        allowed_codes = tipos_permitidos_por_graduacao(m.graduacao)
+        opcoes_tipo_por_militar[m.id] = [(code, label_map[code]) for code in allowed_codes]
+    servicos = Servico.objects.filter(data=data_selecionada).select_related('militar')
+    especiais = {'OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA'}
+    tipos_ocupados = set(Servico.objects.filter(data=data_selecionada, tipo__in=especiais).values_list('tipo', flat=True))
+    if request.method == 'POST':
+        apt_map = {e['militar'].id: e for e in militares_aptos}
+        alterados = 0
+        removidos = 0
+        for s in servicos:
+            if request.POST.get(f'delete_{s.id}') == 'on':
+                s.delete()
+                removidos += 1
+                continue
+            novo_militar_id = request.POST.get(f'militar_{s.id}', str(s.militar.id))
+            novo_tipo = request.POST.get(f'tipo_{s.id}', s.tipo)
+            try:
+                novo_militar_id_int = int(novo_militar_id)
+            except ValueError:
+                novo_militar_id_int = s.militar.id
+            novo_militar = get_object_or_404(Militar, id=novo_militar_id_int)
+            allowed_codes = tipos_permitidos_por_graduacao(novo_militar.graduacao)
+            if novo_tipo not in allowed_codes:
+                messages.warning(request, 'Tipo de serviço não permitido para a graduação selecionada.')
+                continue
+            if novo_tipo in especiais and Servico.objects.filter(data=data_selecionada, tipo=novo_tipo).exclude(id=s.id).exists():
+                messages.warning(request, 'Tipo já atribuído para a data selecionada.')
+                continue
+            if Servico.objects.filter(militar=novo_militar, data=data_selecionada).exclude(id=s.id).exists():
+                messages.warning(request, 'Militar já possui serviço na data.')
+                continue
+            s.militar = novo_militar
+            s.tipo = novo_tipo
+            s.registrado_por = request.user
+            s.save()
+            alterados += 1
+        if alterados and not removidos:
+            messages.success(request, 'Serviços atualizados.')
+        add_militar_id = request.POST.get('add_militar')
+        add_tipo = request.POST.get('add_tipo')
+        if add_militar_id and add_tipo:
+            try:
+                add_militar_int = int(add_militar_id)
+                add_militar = get_object_or_404(Militar, id=add_militar_int)
+                allowed_codes = tipos_permitidos_por_graduacao(add_militar.graduacao)
+                if add_tipo in allowed_codes:
+                    if not Servico.objects.filter(militar=add_militar, data=data_selecionada).exists():
+                        if not (add_tipo in especiais and Servico.objects.filter(data=data_selecionada, tipo=add_tipo).exists()):
+                            Servico.objects.create(
+                                militar=add_militar,
+                                data=data_selecionada,
+                                tipo=add_tipo,
+                                registrado_por=request.user
+                            )
+                            alterados += 1
+                            messages.success(request, 'Serviço adicionado.')
+                else:
+                    messages.warning(request, 'Tipo de serviço não permitido para a graduação selecionada.')
+            except ValueError:
+                pass
+        if alterados or removidos:
+            messages.success(request, 'Alterações aplicadas.')
+        return redirect(f"{reverse('editar_servico')}?data={data_selecionada.isoformat()}")
+    militares_choices = Militar.objects.filter(ativo=True).order_by('nome')
+    usados_ids = list(Servico.objects.filter(data=data_selecionada).values_list('militar_id', flat=True))
+    militares_choices_add = Militar.objects.filter(ativo=True).exclude(id__in=usados_ids).order_by('nome')
+    tipo_label_map = dict(Servico.TIPOS_SERVICO)
+    tipos_lista = Servico.TIPOS_SERVICO
+    servicos_info = [{'obj': s, 'opcoes': opcoes_tipo_por_militar.get(s.militar.id, [])} for s in servicos]
+    return render(request, 'core/editar_servico.html', {
+        'data_selecionada': data_selecionada,
+        'servicos_info': servicos_info,
+        'militares_choices': militares_choices,
+        'militares_choices_add': militares_choices_add,
+        'opcoes_tipo_por_militar': opcoes_tipo_por_militar,
+        'tipo_label_map': tipo_label_map,
+        'tipos_lista': tipos_lista,
+        'tipos_ocupados': tipos_ocupados,
     })
 
 @login_required
@@ -682,6 +799,97 @@ def relatorio_mensal_militar_pdf(request, militar_id, ano, mes):
 
     return response
 
+@login_required
+def estatisticas_servico(request):
+    if not pode_gerar_relatorios(request.user):
+        return HttpResponseForbidden("Você não tem permissão para ver estatísticas.")
+
+    from datetime import datetime
+    hoje = date.today()
+    inicio_str = request.GET.get('inicio')
+    fim_str = request.GET.get('fim')
+    q = request.GET.get('q', '').strip()
+    graduacao = request.GET.get('graduacao', '').strip()
+    subunidade = request.GET.get('subunidade', '').strip()
+    try:
+        inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date() if inicio_str else hoje.replace(day=1)
+    except ValueError:
+        inicio = hoje.replace(day=1)
+    try:
+        fim = datetime.strptime(fim_str, '%Y-%m-%d').date() if fim_str else hoje
+    except ValueError:
+        fim = hoje
+
+    servicos_qs = Servico.objects.filter(data__gte=inicio, data__lte=fim).select_related('militar')
+    if q:
+        servicos_qs = servicos_qs.filter(militar__nome__icontains=q)
+    if graduacao:
+        servicos_qs = servicos_qs.filter(militar__graduacao=graduacao)
+    if subunidade:
+        servicos_qs = servicos_qs.filter(militar__subunidade=subunidade)
+
+    stats_qs = servicos_qs.values('militar_id').annotate(
+        total=Count('id'),
+        guarda=Sum(Case(When(tipo='GUARDA', then=1), default=0, output_field=IntegerField())),
+        plantao=Sum(Case(When(tipo='PLANTAO', then=1), default=0, output_field=IntegerField())),
+        permanencia=Sum(Case(When(tipo='PERMANENCIA', then=1), default=0, output_field=IntegerField())),
+        comandante_guarda=Sum(Case(When(tipo='COMANDANTE_GUARDA', then=1), default=0, output_field=IntegerField())),
+        cabo_guarda=Sum(Case(When(tipo='CABO_GUARDA', then=1), default=0, output_field=IntegerField())),
+        cabo_dia=Sum(Case(When(tipo='CABO_DIA', then=1), default=0, output_field=IntegerField())),
+        adjunto=Sum(Case(When(tipo='ADJUNTO', then=1), default=0, output_field=IntegerField())),
+        oficial_dia=Sum(Case(When(tipo='OFICIAL_DIA', then=1), default=0, output_field=IntegerField())),
+    )
+
+    militar_ids = [row['militar_id'] for row in stats_qs]
+    militares_map = {m.id: m for m in Militar.objects.filter(id__in=militar_ids)}
+
+    stats = []
+    for row in stats_qs:
+        m = militares_map.get(row['militar_id'])
+        if not m:
+            continue
+        stats.append({
+            'militar': m,
+            'graduacao': m.get_graduacao_display(),
+            'subunidade': m.subunidade,
+            'total': row['total'],
+            'guarda': row['guarda'],
+            'plantao': row['plantao'],
+            'permanencia': row['permanencia'],
+            'comandante_guarda': row['comandante_guarda'],
+            'cabo_guarda': row['cabo_guarda'],
+            'cabo_dia': row['cabo_dia'],
+            'adjunto': row['adjunto'],
+            'oficial_dia': row['oficial_dia'],
+        })
+
+    stats = sorted(stats, key=lambda x: x['total'], reverse=True)
+
+    subunidades = Militar.objects.values_list('subunidade', flat=True).distinct().order_by('subunidade')
+
+    tipos_order = [
+        'GUARDA', 'PLANTAO', 'PERMANENCIA',
+        'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA',
+        'ADJUNTO', 'OFICIAL_DIA'
+    ]
+    tipo_label_map = dict(Servico.TIPOS_SERVICO)
+    tipo_agg = servicos_qs.values('tipo').annotate(count=Count('id'))
+    tipo_count_map = {row['tipo']: row['count'] for row in tipo_agg}
+    tipo_labels = [tipo_label_map[t] for t in tipos_order]
+    tipo_values = [tipo_count_map.get(t, 0) for t in tipos_order]
+
+    return render(request, 'core/estatisticas_servico.html', {
+        'stats': stats,
+        'inicio': inicio,
+        'fim': fim,
+        'q': q,
+        'graduacao': graduacao,
+        'subunidade': subunidade,
+        'graduacoes': Militar.GRADUACOES_CHOICES,
+        'subunidades': subunidades,
+        'tipo_labels': tipo_labels,
+        'tipo_values': tipo_values,
+    })
 @login_required
 def api_efetivo(request):
     if not pode_visualizar_efetivo(request.user):

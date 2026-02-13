@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Serviços</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+    <h2>Editar Serviços</h2>
+    <p>Escolha o dia para editar. Somente hoje e próximos dias podem ser alterados.</p>
+    <form method="get" action="{% url 'editar_servico' %}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Data</label>
+            <input type="date" name="data" class="form-control" value="{{ data_selecionada|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary mt-2">Editar</button>
+        </div>
+    </form>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary mt-3">↩ Voltar ao Dashboard</a>
+</body>
+</html>

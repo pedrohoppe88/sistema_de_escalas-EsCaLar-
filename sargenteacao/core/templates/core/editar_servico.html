@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Serviço</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+    <h2>Editar Serviço do Dia {{ data_selecionada|date:"d/m/Y" }}</h2>
+    <p>Somente hoje e próximos dias podem ser alterados.</p>
+    {% if messages %}
+        <div class="mt-2">
+            {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} mb-2">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        <input type="hidden" name="data" value="{{ data_selecionada|date:'Y-m-d' }}">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Nome (Atual)</th>
+                    <th>Tipo (Atual)</th>
+                    <th>Tipo</th>
+                    <th>Militar</th>
+                    <th>Remover</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in servicos_info %}
+                <tr>
+                    <td>{{ row.obj.militar.nome }}</td>
+                    <td>{{ row.obj.get_tipo_display }}</td>
+                    <td>
+                        <select class="form-select form-select-sm" name="tipo_{{ row.obj.id }}">
+                            {% for code,label in row.opcoes %}
+                                <option value="{{ code }}" {% if code == row.obj.tipo %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" name="militar_{{ row.obj.id }}">
+                            {% for m in militares_choices %}
+                                <option value="{{ m.id }}" {% if m.id == row.obj.militar.id %}selected{% endif %}>
+                                    {{ m.graduacao }} — {{ m.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" name="delete_{{ row.obj.id }}">
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">Nenhum serviço registrado para a data.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        <a href="{% url 'editar_servicos' %}?data={{ data_selecionada|date:'Y-m-d' }}" class="btn btn-secondary">↩ Escolher outro dia</a>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">↩ Voltar ao Dashboard</a>
+    </form>
+    <hr>
+    <h3>Adicionar novo serviço</h3>
+    <form method="post" class="row g-2 align-items-end">
+        {% csrf_token %}
+        <input type="hidden" name="data" value="{{ data_selecionada|date:'Y-m-d' }}">
+        <div class="col-md-4">
+            <label class="form-label">Militar</label>
+            <select class="form-select" name="add_militar">
+                <option value="">Selecione</option>
+                {% for m in militares_choices_add %}
+                    <option value="{{ m.id }}">{{ m.graduacao }} — {{ m.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Tipo de Serviço</label>
+            <select class="form-select" name="add_tipo">
+                {% for code,label in tipos_lista %}
+                    <option value="{{ code }}" {% if code in tipos_ocupados %}disabled{% endif %}>
+                        {{ label }}{% if code in tipos_ocupados %} — já atribuído{% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-success mt-4">Adicionar</button>
+        </div>
+    </form>
+</body>
+</html>

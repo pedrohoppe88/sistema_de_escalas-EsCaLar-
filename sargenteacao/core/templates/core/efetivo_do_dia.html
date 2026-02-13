@@ -35,6 +35,8 @@
         </thead>
 
         <tbody>
+
+            
         {% for item in efetivo %}
             <tr
                 {% if item.status == 'INAPTO' or item.status == 'BLOQUEADO' %}
@@ -122,7 +124,10 @@
     </a>
 {% endif %}
 
-</div>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        ↩ Voltar ao Dashboard
+    </a>
 
+</div>
 </body>
 </html>
