@@ -187,65 +187,6 @@ def dashboard(request):
     }
     return render(request, 'core/dashboard.html', context)
     
-    
-def gerar_aditamento_pdf(request):
-    hoje = date.today()
-
-    servicos = Servico.objects.filter(data=hoje).select_related('militar')
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'attachment; filename="aditamento_{hoje.strftime("%d_%m_%Y")}.pdf"'
-    )
-
-    c = canvas.Canvas(response, pagesize=A4)
-    largura, altura = A4
-
-    y = altura - 50
-
-    # 🪖 Cabeçalho
-    c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(largura / 2, y, "ADITAMENTO AO BOLETIM INTERNO")
-    y -= 25
-
-    c.setFont("Helvetica", 11)
-    c.drawCentredString(
-        largura / 2, y,
-        f"Serviço do dia {hoje.strftime('%d/%m/%Y')}"
-    )
-
-    y -= 40
-
-    # 📋 Lista de militares
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(50, y, "MILITARES ESCALADOS:")
-    y -= 20
-
-    c.setFont("Helvetica", 10)
-
-    if not servicos.exists():
-        c.drawString(50, y, "Nenhum militar escalado.")
-    else:
-        for idx, servico in enumerate(servicos, start=1):
-            texto = f"{idx}. {servico.militar.nome}"
-            c.drawString(60, y, texto)
-            y -= 18
-
-            # Quebra de página
-            if y < 50:
-                c.showPage()
-                c.setFont("Helvetica", 10)
-                y = altura - 50
-
-    # 🖊️ Rodapé
-    y -= 40
-    c.setFont("Helvetica", 9)
-    c.drawString(50, y, "Sargenteação / Administração do Serviço")
-
-    c.showPage()
-    c.save()
-
-    return response
 
 @login_required
 def registrar_servico(request):
@@ -294,21 +235,21 @@ def registrar_servico(request):
 
             if str(militar.id) in selecionados:
 
-                # ❌ Regra 1: não duplicar serviço no mesmo dia
+                #Regra 1: não duplicar serviço no mesmo dia
                 if Servico.objects.filter(militar=militar, data=data_selecionada).exists():
                     continue
 
-                # ❌ Regra 2: garantir que é apto
+                # Regra 2: garantir que é apto
                 if not item['apto']:
                     continue
 
-                # ✅ Registrar serviço
+                # Registrar serviço
                 tipo = request.POST.get(f'tipo_{militar.id}', 'GUARDA')
                 grad = militar.graduacao
                 allowed = tipos_permitidos_por_graduacao(grad)
                 if tipo not in allowed:
                     continue
-                # ❌ Regra 3: cargos especiais são únicos por dia
+                #Regra 3: cargos especiais são únicos por dia
                 especiais = {'OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA'}
                 if tipo in especiais and Servico.objects.filter(data=data_selecionada, tipo=tipo).exists():
                     messages.warning(request, f'Cargo {tipo.replace("_", " ").title()} já atribuído para {data_selecionada.strftime("%d/%m/%Y")}.')
@@ -320,7 +261,7 @@ def registrar_servico(request):
                     registrado_por=request.user
                 )
 
-        messages.success(request, '✅ Serviço registrado com sucesso')
+        messages.success(request, 'Serviço registrado com sucesso')
         return redirect(f"{reverse('registrar_servico')}?data={data_selecionada.isoformat()}")
 
     especiais = {'OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA'}
