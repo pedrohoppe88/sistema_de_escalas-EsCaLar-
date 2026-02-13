@@ -1,28 +1,49 @@
-from django.shortcuts import render
-from .services import calcular_efetivo_do_dia, calcular_efetivo_por_data
-from datetime import date
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Militar, Servico, Afastamento
-from datetime import date
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.db.models import Count, Q, IntegerField, Sum, Case, When
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from .models import Militar, Afastamento
-from .serializers import MilitarSerializer
-
+from calendar import month_name
 from datetime import date
-from django.http import HttpResponse
-from django.http import JsonResponse
-from reportlab.lib.pagesizes import A4
+# Import dos modelos
+from .models import Militar, Servico, Afastamento
 from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 
-from .models import Servico
+# Import dos serviços
+from .services import (
+    calcular_efetivo_do_dia,
+    calcular_efetivo_por_data,
+    tipos_permitidos_por_graduacao,
+    filtrar_militares_aptos,
+    filtrar_militares_nao_aptos,
+    get_opcoes_tipo_por_militar,
+    get_tipos_ocupados_por_data,
+    pode_atribuir_tipo,
+    registrar_servicos,
+    atualizar_servico,
+    excluir_servico,
+    adicionar_servico,
+    calcular_estatisticas_servico,
+    calcular_contagem_por_tipo,
+    gerar_eventos_calendario,
+    get_historico_servicos,
+    get_estatisticas_historico,
+    TIPO_SERVICO_LABELS,
+    CARGOS_ESPECIAIS,
+)
 
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
-from django.db.models import Count, Q, IntegerField, Sum, Case, When
+# Import dos formulários
+from .forms import LoginForm, RegistrationForm, MilitarForm, AfastamentoForm
+
+# Import dos serviços de PDF (com alias para evitar conflito de nomes)
+from .pdf_services import gerar_aditamento_pdf as gerar_aditamento_pdf_service, gerar_relatorio_mensal_pdf
+
+# Import das permissões
 from .utils.permissoes import (
     pode_registrar_servico,
     pode_gerar_relatorios,
@@ -32,55 +53,9 @@ from .utils.permissoes import (
     pode_gerenciar_usuarios,
     assign_default_group
 )
-from django.shortcuts import render, get_object_or_404
-from calendar import month_name
 
-# Authentication imports
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import UserCreationForm
-
-# Regras de tipos permitidos por graduação
-def tipos_permitidos_por_graduacao(grad):
-    base = ['GUARDA', 'PLANTAO', 'PERMANENCIA']
-    allowed = []
-    if grad in ('SD', 'CB'):
-        allowed.extend(base)
-    if grad == 'CB':
-        allowed.extend(['CABO_GUARDA', 'CABO_DIA'])
-    if grad == '3SG':
-        allowed.append('COMANDANTE_GUARDA')
-    if grad in ('2SG', '1SG'):
-        allowed.append('ADJUNTO')
-    if grad in ('1TEN', '2TEN'):
-        allowed.append('OFICIAL_DIA')
-    return allowed
-from django.forms import Form, CharField, PasswordInput, EmailInput, Select, TextInput
-
-# Login Form
-class LoginForm(Form):
-    username = CharField(max_length=150, widget=TextInput(attrs={
-        'class': 'form-control',
-        'placeholder': 'Nome de usuário',
-        'type': 'text',
-        'inputmode': 'text',
-        'autocomplete': 'username',
-        'style': 'background-image: none !important;'
-    }))
-    password = CharField(widget=PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Senha'}))
-
-# Registration Form
-class RegistrationForm(UserCreationForm):
-    email = CharField(max_length=254, required=True, widget=EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}))
-    graduacao = CharField(max_length=20, required=True, widget=Select(choices=Militar.GRADUACOES_CHOICES, attrs={'class': 'form-control'}))
-
-    class Meta:
-        model = UserCreationForm.Meta.model
-        fields = ('username', 'email', 'graduacao', 'password1', 'password2')
-        widgets = {
-            'username': TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome de usuário'}),
-            'password1': PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Senha'}),
-            'password2': PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirmar senha'}),
-        }
+# Import dos serializers
+from .serializers import MilitarSerializer, AfastamentoSerializer
 
 def login_view(request):
     if request.method == 'POST':
@@ -399,120 +374,19 @@ def editar_servico(request):
 
 @login_required
 def gerar_aditamento_pdf(request):
+    """Gera o PDF do aditamento do dia atual."""
     if not pode_gerar_relatorios(request.user):
         return HttpResponseForbidden("Você não tem permissão para gerar o aditamento.")
 
     hoje = date.today()
-
     servicos = Servico.objects.filter(data=hoje).select_related('militar')
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'attachment; filename="aditamento_{hoje.strftime("%d_%m_%Y")}.pdf"'
-    )
-
-    c = canvas.Canvas(response, pagesize=A4)
-    largura, altura = A4
-
-    y = altura - 50
-
-    # 🪖 Cabeçalho
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(largura / 2, y, "ADITAMENTO AO BOLETIM INTERNO")
-    y -= 28
-    c.setLineWidth(1)
-    c.line(50, y, largura - 50, y)
-    y -= 18
-
-    c.setFont("Helvetica", 11)
-    c.drawCentredString(
-        largura / 2, y,
-        f"Serviço do dia {hoje.strftime('%d/%m/%Y')}"
-    )
-
-    y -= 32
-
-    # 📋 Agrupado por tipo de serviço
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Serviços por Tipo")
-    y -= 18
-    c.setLineWidth(0.7)
-    c.line(50, y, largura - 50, y)
-    y -= 16
-
-    c.setFont("Helvetica", 10)
-
-    sections = [
-        ('COMANDANTE_GUARDA', 'Comandante da Guarda'),
-        ('CABO_GUARDA', 'Cabo da Guarda'),
-        ('CABO_DIA', 'Cabo de Dia'),
-        ('ADJUNTO', 'Adjunto'),
-        ('OFICIAL_DIA', 'Oficial de Dia'),
-        ('GUARDA', 'Guarda ao Quartel'),
-        ('PLANTAO', 'Plantão'),
-        ('PERMANENCIA', 'Permanência'),
-    ]
-
-    if not servicos.exists():
-        c.drawString(50, y, "Nenhum militar escalado.")
-    else:
-        for tipo, titulo in sections:
-            # Seção do tipo
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(50, y, titulo)
-            y -= 14
-
-            entries = servicos.filter(tipo=tipo)
-
-            if not entries.exists():
-                c.setFont("Helvetica-Oblique", 10)
-                c.drawString(60, y, "— Nenhum militar neste tipo —")
-                y -= 16
-            else:
-                c.setFont("Helvetica", 10)
-                for idx, s in enumerate(entries, start=1):
-                    grad = s.militar.get_graduacao_display()
-                    nome = s.militar.nome
-                    texto = f"{idx}. {grad} — {nome}"
-                    c.drawString(60, y, texto)
-                    y -= 16
-
-                    # Quebra de página
-                    if y < 60:
-                        c.showPage()
-                        largura, altura = A4
-                        y = altura - 50
-                        c.setFont("Helvetica-Bold", 16)
-                        c.drawCentredString(largura / 2, y, "ADITAMENTO AO BOLETIM INTERNO")
-                        y -= 28
-                        c.setLineWidth(1)
-                        c.line(50, y, largura - 50, y)
-                        y -= 18
-                        c.setFont("Helvetica", 11)
-                        c.drawCentredString(largura / 2, y, f"Serviço do dia {hoje.strftime('%d/%m/%Y')}")
-                        y -= 32
-                        c.setFont("Helvetica-Bold", 12)
-                        c.drawString(50, y, "Serviços por Tipo")
-                        y -= 18
-                        c.setLineWidth(0.7)
-                        c.line(50, y, largura - 50, y)
-                        y -= 16
-
-            # Espaço entre seções
-            y -= 10
-
-    # 🖊️ Rodapé
-    y -= 20
-    c.setFont("Helvetica-Oblique", 9)
-    c.drawString(50, y, "Sargenteação / Administração do Serviço")
-
-    c.showPage()
-    c.save()
-
-    return response
     
+    return gerar_aditamento_pdf_service(hoje, servicos)
+    
+
 @login_required
 def gerar_aditamento_pdf_por_data(request, ano, mes, dia):
+    """Gera o PDF do aditamento para uma data específica."""
     if not pode_gerar_relatorios(request.user):
         return HttpResponseForbidden("Você não tem permissão para gerar o aditamento.")
 
@@ -523,105 +397,9 @@ def gerar_aditamento_pdf_por_data(request, ano, mes, dia):
         data_ref = date.today()
 
     servicos = Servico.objects.filter(data=data_ref).select_related('militar')
+    
+    return gerar_aditamento_pdf_service(data_ref, servicos)
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'attachment; filename="aditamento_{data_ref.strftime("%d_%m_%Y")}.pdf"'
-    )
-
-    c = canvas.Canvas(response, pagesize=A4)
-    largura, altura = A4
-
-    y = altura - 50
-
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(largura / 2, y, "ADITAMENTO AO BOLETIM INTERNO")
-    y -= 28
-    c.setLineWidth(1)
-    c.line(50, y, largura - 50, y)
-    y -= 18
-
-    c.setFont("Helvetica", 11)
-    c.drawCentredString(
-        largura / 2, y,
-        f"Serviço do dia {data_ref.strftime('%d/%m/%Y')}"
-    )
-
-    y -= 32
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Serviços por Tipo")
-    y -= 18
-    c.setLineWidth(0.7)
-    c.line(50, y, largura - 50, y)
-    y -= 16
-
-    c.setFont("Helvetica", 10)
-
-    sections = [
-        ('COMANDANTE_GUARDA', 'Comandante da Guarda'),
-        ('CABO_GUARDA', 'Cabo da Guarda'),
-        ('CABO_DIA', 'Cabo de Dia'),
-        ('ADJUNTO', 'Adjunto'),
-        ('OFICIAL_DIA', 'Oficial de Dia'),
-        ('GUARDA', 'Guarda ao Quartel'),
-        ('PLANTAO', 'Plantão'),
-        ('PERMANENCIA', 'Permanência'),
-    ]
-
-    if not servicos.exists():
-        c.drawString(50, y, "Nenhum militar escalado.")
-    else:
-        for tipo, titulo in sections:
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(50, y, titulo)
-            y -= 14
-
-            entries = servicos.filter(tipo=tipo)
-
-            if not entries.exists():
-                c.setFont("Helvetica-Oblique", 10)
-                c.drawString(60, y, "— Nenhum militar neste tipo —")
-                y -= 16
-            else:
-                c.setFont("Helvetica", 10)
-                for idx, s in enumerate(entries, start=1):
-                    grad = s.militar.get_graduacao_display()
-                    nome = s.militar.nome
-                    texto = f"{idx}. {grad} — {nome}"
-                    c.drawString(60, y, texto)
-                    y -= 16
-
-                    if y < 60:
-                        c.showPage()
-                        largura, altura = A4
-                        y = altura - 50
-                        c.setFont("Helvetica-Bold", 16)
-                        c.drawCentredString(largura / 2, y, "ADITAMENTO AO BOLETIM INTERNO")
-                        y -= 28
-                        c.setLineWidth(1)
-                        c.line(50, y, largura - 50, y)
-                        y -= 18
-                        c.setFont("Helvetica", 11)
-                        c.drawCentredString(largura / 2, y, f"Serviço do dia {data_ref.strftime('%d/%m/%Y')}")
-                        y -= 32
-                        c.setFont("Helvetica-Bold", 12)
-                        c.drawString(50, y, "Serviços por Tipo")
-                        y -= 18
-                        c.setLineWidth(0.7)
-                        c.line(50, y, largura - 50, y)
-                        y -= 16
-
-            y -= 10
-
-    y -= 20
-    c.setFont("Helvetica-Oblique", 9)
-    c.drawString(50, y, "Sargenteação / Administração do Serviço")
-
-    c.showPage()
-    c.save()
-
-    return response
 @login_required
 def historico_militar(request, militar_id):
 
@@ -963,66 +741,6 @@ def calendario_events(request):
         })
     return JsonResponse(events, safe=False)
 
-    militar = get_object_or_404(Militar, id=militar_id)
-
-    servicos = Servico.objects.filter(
-        militar=militar,
-        data__year=ano,
-        data__month=mes
-    ).order_by('data')
-
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'inline; filename="relatorio_{militar.nome}_{mes}_{ano}.pdf"'
-    )
-
-    pdf = canvas.Canvas(response, pagesize=A4)
-    largura, altura = A4
-
-    y = altura - 50
-
-    # 🧾 Cabeçalho
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(50, y, "RELATÓRIO MENSAL DE SERVIÇOS")
-    y -= 30
-
-    pdf.setFont("Helvetica", 11)
-    pdf.drawString(50, y, f"Militar: {militar.nome}")
-    y -= 20
-    pdf.drawString(50, y, f"Mês/Ano: {month_name[mes].upper()} / {ano}")
-    y -= 20
-    pdf.drawString(50, y, f"Total de serviços: {servicos.count()}")
-    y -= 30
-
-    # 📋 Tabela simples
-    pdf.setFont("Helvetica-Bold", 11)
-    pdf.drawString(50, y, "DATA DO SERVIÇO")
-    y -= 15
-    pdf.line(50, y, 300, y)
-    y -= 15
-
-    pdf.setFont("Helvetica", 11)
-
-    if servicos.exists():
-        for servico in servicos:
-            pdf.drawString(50, y, servico.data.strftime('%d/%m/%Y'))
-            y -= 18
-
-            if y < 50:
-                pdf.showPage()
-                y = altura - 50
-                pdf.setFont("Helvetica", 11)
-    else:
-        pdf.drawString(50, y, "Nenhum serviço registrado no período.")
-
-    # 🪖 Rodapé
-    pdf.setFont("Helvetica-Oblique", 9)
-    pdf.drawString(50, 30, "Documento gerado pelo Sistema de Sargenteação")
-
-    pdf.showPage()
-    pdf.save()
-
-    return response
 
 @login_required
 def admin_user_management(request):
