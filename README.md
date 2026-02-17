@@ -2,23 +2,6 @@
 
 Sistema de gestão militar para controle de serviços, efetivos e afastamentos da troops.
 
-## 📋 Índice
-
-- [Sobre o Projeto](#sobre-o-projeto)
-- [Funcionalidades](#funcionalidades)
-- [Tecnologias](#tecnologias)
-- [Pré-requisitos](#pré-requisitos)
-- [Instalação](#instalação)
-- [Configuração](#configuração)
-- [Uso](#uso)
-- [API REST](#api-rest)
-- [Testes](#testes)
-- [Docker](#docker)
-- [Contribuição](#contribuição)
-- [Licença](#licença)
-
----
-
 ## 📖 Sobre o Projeto
 
 O Sistema de Sargenteação é uma aplicação web desenvolvida em Django para automatizar e gerenciar os serviços militares, controle de efetivo diário e registros de afastamento de militares.
@@ -292,27 +275,3 @@ sistema_sargenteacao/
 ```
 
 ---
-
-## 🤝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
-
----
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
-
----
-
-## 📞 Suporte
-
-Para dúvidas e suporte, entre em contato através das issues do GitHub.
-
----
-
-Desenvolvido com ❤️ para gestão militar.
