@@ -110,7 +110,7 @@ class Servico(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['data', 'tipo'],
-                condition=Q(tipo__in=['OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA']),
+                condition=Q(tipo__in=['OFICIAL_DIA', 'ADJUNTO', 'COMANDANTE_GUARDA', 'CABO_GUARDA', 'CABO_DIA', 'SGT_DIA', 'MOTORISTA_DIA']),
                 name='unique_special_role_per_day',
             )
         ]

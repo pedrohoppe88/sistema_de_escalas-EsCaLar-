@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-o0#faxv(f^cg$1ap@er62rj*ybg#5rvxt&flnd25ijcr=0@*p!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -157,4 +157,4 @@ CSRF_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 dias
 CSRF_COOKIE_NAME = 'csrftoken'
 
 # Trusted origins for CSRF (adicione seu domínio em produção)
-CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
