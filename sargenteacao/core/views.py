@@ -19,6 +19,7 @@ from .services import (
     calcular_efetivo_do_dia,
     calcular_efetivo_por_data,
     tipos_permitidos_por_graduacao,
+    graduacoes_permitidas_por_tipo,
     filtrar_militares_aptos,
     filtrar_militares_nao_aptos,
     get_opcoes_tipo_por_militar,
@@ -35,6 +36,7 @@ from .services import (
     get_estatisticas_historico,
     TIPO_SERVICO_LABELS,
     CARGOS_ESPECIAIS,
+    invalidar_cache_efetivo,
 )
 
 # Import dos formulários
@@ -236,6 +238,9 @@ def registrar_servico(request):
                     registrado_por=request.user
                 )
 
+        # Invalida o cache do efetivo para que os militares registrados apareçam em "Não Aptos"
+        invalidar_cache_efetivo(data_selecionada)
+
         messages.success(request, 'Serviço registrado com sucesso')
         return redirect(f"{reverse('registrar_servico')}?data={data_selecionada.isoformat()}")
 
@@ -353,9 +358,23 @@ def editar_servico(request):
             except ValueError:
                 pass
         if alterados or removidos:
+            # Invalida o cache do efetivo para que as alterações apareçam corretamente
+            invalidar_cache_efetivo(data_selecionada)
             messages.success(request, 'Alterações aplicadas.')
         return redirect(f"{reverse('editar_servico')}?data={data_selecionada.isoformat()}")
-    militares_choices = Militar.objects.filter(ativo=True).order_by('nome')
+    # Prepara as escolhas de militares filtradas por tipo de serviço
+    # Para cada serviço, mostra apenas militares que podem realizar aquele tipo de serviço
+    militares_choices_por_servico = {}
+    for s in servicos:
+        tipo_servico = s.tipo
+        graduacoes_permitidas = graduacoes_permitidas_por_tipo(tipo_servico)
+        # Obtém militares que têm a graduação permitida para este tipo de serviço
+        militares_filtrados = Militar.objects.filter(
+            ativo=True, 
+            graduacao__in=graduacoes_permitidas
+        ).order_by('nome')
+        militares_choices_por_servico[s.id] = militares_filtrados
+    
     usados_ids = list(Servico.objects.filter(data=data_selecionada).values_list('militar_id', flat=True))
     militares_choices_add = Militar.objects.filter(ativo=True).exclude(id__in=usados_ids).order_by('nome')
     tipo_label_map = dict(Servico.TIPOS_SERVICO)
@@ -364,7 +383,8 @@ def editar_servico(request):
     return render(request, 'core/editar_servico.html', {
         'data_selecionada': data_selecionada,
         'servicos_info': servicos_info,
-        'militares_choices': militares_choices,
+        'militares_choices': Militar.objects.filter(ativo=True).order_by('nome'),
+        'militares_choices_por_servico': militares_choices_por_servico,
         'militares_choices_add': militares_choices_add,
         'opcoes_tipo_por_militar': opcoes_tipo_por_militar,
         'tipo_label_map': tipo_label_map,
@@ -648,16 +668,83 @@ def api_militar_novo(request):
 
 @login_required
 def api_militar_editar(request, militar_id):
+    """
+    Atualiza um militar existente.
+    
+    Métodos HTTP suportados:
+    - PUT: Substituição completa - todos os campos são atualizados (campos não enviados usam valores atuais)
+    - PATCH: Atualização parcial - apenas campos enviados são atualizados
+    
+    Semântica REST correta:
+    - PUT: Substitui todos os campos do recurso. Campos não enviados mantêm valores atuais do banco.
+    - PATCH: Atualiza parcialmente apenas os campos enviados. Campos não enviados são ignorados.
+    
+    Para manter compatibilidade com formulários HTML que não suportam PUT/PATCH nativamente,
+    aceita também o parâmetro '_method' via POST para simular o método real.
+    
+    Exemplos:
+    - PUT /militar/1/ -> Substitui todos os campos
+    - PATCH /militar/1/ -> Atualiza apenas campos enviados
+    """
     if not pode_gerenciar_militares(request.user):
         return HttpResponseForbidden("Você não tem permissão para editar militares.")
+    
     militar = get_object_or_404(Militar, id=militar_id)
-    if request.method == 'POST':
-        militar.nome = request.POST.get('nome', militar.nome).strip()
-        militar.graduacao = request.POST.get('graduacao', militar.graduacao)
-        militar.subunidade = request.POST.get('subunidade', militar.subunidade).strip()
-        militar.ativo = request.POST.get('ativo') == 'on'
+    
+    # Verifica o método real (suporta PATCH, PUT ou _method via POST)
+    method = request.method
+    if method == 'POST':
+        # Suporta method override via campo oculto '_method'
+        method = request.POST.get('_method', 'POST').upper()
+    
+    if method == 'PUT':
+        # PUT: Substituição completa
+        # Campos não enviados devem manter valores atuais do banco (não são definidos como None)
+        
+        # Obtém os dados do formulário
+        nome = request.POST.get('nome')
+        graduacao = request.POST.get('graduacao')
+        subunidade = request.POST.get('subunidade')
+        ativo = request.POST.get('ativo')
+        
+        # Atualiza os campos enviados (campos não enviados mantêm valores atuais)
+        if nome is not None and nome.strip():
+            militar.nome = nome.strip()
+        if graduacao is not None:
+            militar.graduacao = graduacao
+        if subunidade is not None:
+            militar.subunidade = subunidade.strip() if subunidade.strip() else 'Geral'
+        if ativo is not None:
+            militar.ativo = ativo == 'on'
+        
         militar.save()
-        messages.success(request, 'Militar atualizado.')
+        messages.success(request, 'Militar atualizado com sucesso (PUT).')
+        
+    elif method == 'PATCH':
+        # PATCH: Atualização parcial
+        # Apenas campos explicitamente enviados são atualizados
+        
+        # Obtém os dados do formulário
+        nome = request.POST.get('nome')
+        graduacao = request.POST.get('graduacao')
+        subunidade = request.POST.get('subunidade')
+        ativo = request.POST.get('ativo')
+        
+        # Atualiza apenas os campos enviados (PATCH semantics)
+        if nome is not None:
+            militar.nome = nome.strip()
+        if graduacao is not None:
+            militar.graduacao = graduacao
+        if subunidade is not None:
+            militar.subunidade = subunidade.strip()
+        if ativo is not None:
+            militar.ativo = ativo == 'on'
+        
+        militar.save()
+        messages.success(request, 'Militar atualizado com sucesso (PATCH).')
+    else:
+        messages.error(request, 'Método não permitido. Use PUT ou PATCH para atualizar.')
+    
     return redirect('api_efetivo')
 
 @login_required
@@ -689,12 +776,30 @@ def calendario_events(request):
     start_str = request.GET.get('start')
     end_str = request.GET.get('end')
     subunidade = request.GET.get('subunidade')
+    
+    # Define um range padrão de 3 meses se não houver parâmetros
+    today = date.today()
+    
     try:
-        start = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else date.today()
-        end = datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else date.today()
+        # Tenta primeiro com formato completo (ISO 8601 com hora)
+        if start_str:
+            start = datetime.fromisoformat(start_str.replace('Z', '+00:00')).date()
+        else:
+            start = today - timedelta(days=30)  # Padrão: 30 dias atrás
+        
+        if end_str:
+            end = datetime.fromisoformat(end_str.replace('Z', '+00:00')).date()
+        else:
+            end = today + timedelta(days=60)  # Padrão: 60 dias adelante
     except ValueError:
-        start = date.today()
-        end = start
+        # Fallback para formato simples sem hora
+        try:
+            start = datetime.strptime(start_str, '%Y-%m-%d').date() if start_str else today - timedelta(days=30)
+            end = datetime.strptime(end_str, '%Y-%m-%d').date() if end_str else today + timedelta(days=60)
+        except ValueError:
+            # Último fallback: usar range padrão
+            start = today - timedelta(days=30)
+            end = today + timedelta(days=60)
     qs_serv = Servico.objects.filter(data__gte=start, data__lte=end).select_related('militar')
     qs_afast = Afastamento.objects.filter(data_inicio__lte=end, data_fim__gte=start).select_related('militar')
     if subunidade:
@@ -712,7 +817,8 @@ def calendario_events(request):
     }
     events = []
     for s in qs_serv:
-        title = s.militar.nome
+        graduacao = s.militar.get_graduacao_display()
+        title = f"{graduacao} {s.militar.nome}"
         events.append({
             'id': f'srv-{s.id}',
             'title': title,
@@ -726,7 +832,8 @@ def calendario_events(request):
             }
         })
     for a in qs_afast:
-        title = a.militar.nome
+        graduacao = a.militar.get_graduacao_display()
+        title = f"{graduacao} {a.militar.nome}"
         events.append({
             'id': f'af-{a.id}',
             'title': title,

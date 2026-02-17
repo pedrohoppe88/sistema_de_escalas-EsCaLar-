@@ -79,6 +79,8 @@ class Servico(models.Model):
         ('CABO_DIA', 'Cabo de Dia'),
         ('ADJUNTO', 'Adjunto'),
         ('OFICIAL_DIA', 'Oficial de Dia'),
+        ('SGT_DIA', 'Sargento de Dia'),
+        ('MOTORISTA_DIA', 'Motorista de Dia'),
     ]
     militar = models.ForeignKey(
         Militar,

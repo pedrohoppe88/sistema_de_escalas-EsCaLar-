@@ -99,6 +99,40 @@ def tipos_permitidos_por_graduacao(grad: str) -> List[str]:
     return allowed
 
 
+def graduacoes_permitidas_por_tipo(tipo: str) -> List[str]:
+    """
+    Retorna a lista de graduações permitidas para um determinado tipo de serviço.
+    Esta é a função inversa de tipos_permitidos_por_graduacao.
+    
+    Args:
+        tipo: O código do tipo de serviço (GUARDA, CABO_GUARDA, etc.)
+        
+    Returns:
+        Lista de códigos de graduação permitidos
+    """
+    # GUARDA, PLANTAO, PERMANENCIA podem ser feitos por todas as graduações
+    if tipo in ('GUARDA', 'PLANTAO', 'PERMANENCIA'):
+        return ['SD', 'CB', '3SG', '2SG', '1SG', '1TEN', '2TEN']
+    
+    # CABO_GUARDA e CABO_DIA só podem ser feitos por CB
+    if tipo in ('CABO_GUARDA', 'CABO_DIA'):
+        return ['CB']
+    
+    # COMANDANTE_GUARDA só pode ser feito por 3SG
+    if tipo == 'COMANDANTE_GUARDA':
+        return ['3SG']
+    
+    # ADJUNTO pode ser feito por 2SG ou 1SG
+    if tipo == 'ADJUNTO':
+        return ['2SG', '1SG']
+    
+    # OFICIAL_DIA pode ser feito por 1TEN ou 2TEN
+    if tipo == 'OFICIAL_DIA':
+        return ['1TEN', '2TEN']
+    
+    return []
+
+
 def get_opcoes_tipo_por_militar(militar: Militar) -> List[tuple]:
     """
     Retorna as opções de tipo de serviço para um militar específico.
@@ -235,15 +269,15 @@ def calcular_efetivo_por_data(data_referencia: date):
         else:
             dias_folga = (hoje - ultima_data).days
 
-            # ❌ Não pode tirar serviço em dias seguidos
+            # ❌ Não pode tirar serviço em dias seguidos (regra de negócio)
             if ultima_data == ontem:
                 resultado.append({
                     'militar': militar,
                     'apto': False,
                     'motivo': 'Serviço ontem',
                     'dias_folga': 0,
-                    'status': STATUS_BLOQUEADO,
-                    'ja_escalado': ja_escalado
+                    'status': STATUS_BAIXA,
+                    'ja_escalado': False
                 })
                 continue
 

@@ -1,141 +1,353 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Militares — Efetivo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="container mt-4">
+{% extends 'base.html' %}
 
-<h2>🪖 Militares no Sistema</h2>
+{% block title %}Militares — Efetivo | EsCaLar{% endblock %}
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-md-5">
-        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Pesquisar por nome">
+{% block content %}
+
+<style>
+
+/* CARD MODERNO */
+.card-modern {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+}
+
+/* TÍTULOS */
+.section-title {
+    font-weight: 600;
+    letter-spacing: .3px;
+}
+
+/* BOTÕES */
+.btn-soft {
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all .2s ease;
+}
+
+.btn-soft:hover {
+    transform: translateY(-1px);
+    opacity: .95;
+}
+
+/* TABELA */
+.table-modern thead {
+    background: #f3f4f6;
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.table-modern tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* BADGES */
+.badge-modern {
+    padding: .45rem .65rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: .8rem;
+}
+
+/* STATUS */
+.status-ativo {
+    background: #e6f9ef;
+    color: #15803d;
+    border: 1px solid #15803d;
+}
+
+.status-inativo {
+    background: #fdecec;
+    color: #b91c1c;
+    border: 1px solid #b91c1c;
+}
+
+/* ÁREA DE EDIÇÃO */
+.edit-area {
+    background: #f9fafb;
+    border-left: 4px solid #6b7280;
+}
+
+.edit-area input,
+.edit-area select {
+    color: #000 !important;
+    font-weight: 500;
+}
+
+.label-strong {
+    font-weight: 600;
+    font-size: .85rem;
+    color: #374151;
+}
+
+</style>
+
+
+<!-- HEADER -->
+<div class="mb-4">
+    <h2 class="section-title">
+        <i class="fas fa-users me-2 text-secondary"></i>
+        Militares no Sistema
+    </h2>
+    <p class="text-muted">Gerenciamento completo do efetivo militar</p>
+</div>
+
+
+<!-- SEARCH CARD -->
+<div class="card card-modern mb-4">
+    <div class="card-body p-4">
+        <form method="get" class="row g-3 align-items-end">
+
+            <div class="col-md-5">
+                <label class="form-label small text-muted">Pesquisar por nome</label>
+                <input type="text" name="q" value="{{ q }}" 
+                       class="form-control form-control-lg"
+                       placeholder="Digite o nome do militar...">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Graduação</label>
+                <select name="graduacao" class="form-select form-select-lg">
+                    <option value="">Todas</option>
+                    {% for code,label in graduacoes %}
+                        <option value="{{ code }}" {% if graduacao == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-lg w-100 btn-soft btn-secondary">
+                    <i class="fas fa-search me-1"></i>Pesquisar
+                </button>
+            </div>
+
+            <div class="col-md-2">
+                <a href="{% url 'api_efetivo' %}"
+                   class="btn btn-outline-secondary btn-lg w-100 btn-soft">
+                    Limpar
+                </a>
+            </div>
+
+        </form>
     </div>
-    <div class="col-md-3">
-        <select name="graduacao" class="form-select">
-            <option value="">Todas as graduações</option>
-            {% for code,label in graduacoes %}
-                <option value="{{ code }}" {% if graduacao == code %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-md-2">
-        <button class="btn btn-outline-primary w-100">Pesquisar</button>
-    </div>
-    <div class="col-md-2">
-        <a href="{% url 'api_efetivo' %}" class="btn btn-outline-secondary w-100">Limpar</a>
-    </div>
-</form>
+</div>
+
 
 {% if can_manage %}
-<div class="card mb-3">
-    <div class="card-header">Novo Militar</div>
-    <div class="card-body">
-        <form method="post" action="{% url 'api_militar_novo' %}" class="row g-2">
+<!-- NOVO MILITAR -->
+<div class="card card-modern mb-4">
+    <div class="card-header bg-transparent border-0 pt-4 px-4">
+        <h5 class="section-title text-secondary">
+            <i class="fas fa-user-plus me-2"></i>Novo Militar
+        </h5>
+    </div>
+
+    <div class="card-body px-4 pb-4">
+        <form method="post" action="{% url 'api_militar_novo' %}" class="row g-3 align-items-end">
             {% csrf_token %}
+
             <div class="col-md-4">
-                <input type="text" name="nome" class="form-control" placeholder="Nome" required>
+                <label class="form-label small text-muted">Nome completo</label>
+                <input type="text" name="nome" class="form-control form-control-lg" required>
             </div>
+
             <div class="col-md-3">
-                <select name="graduacao" class="form-select">
+                <label class="form-label small text-muted">Graduação</label>
+                <select name="graduacao" class="form-select form-select-lg">
                     {% for code,label in graduacoes %}
                         <option value="{{ code }}">{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
+
             <div class="col-md-3">
-                <input type="text" name="subunidade" class="form-control" placeholder="Subunidade">
+                <label class="form-label small text-muted">Subunidade</label>
+                <input type="text" name="subunidade" class="form-control form-control-lg">
             </div>
-            <div class="col-md-1 form-check">
-                <input type="checkbox" class="form-check-input" id="ativo_novo" name="ativo" checked>
-                <label class="form-check-label" for="ativo_novo">Ativo</label>
+
+            <!-- ATIVO MAIS VISÍVEL -->
+            <div class="col-md-1 d-flex align-items-center">
+                <div class="form-check mt-4">
+                    <input type="checkbox" 
+                           class="form-check-input" 
+                           id="ativo_novo" 
+                           name="ativo" 
+                           checked>
+                    <label class="form-check-label label-strong ms-1" for="ativo_novo">
+                        Ativo
+                    </label>
+                </div>
             </div>
+
             <div class="col-md-1">
-                <button class="btn btn-success w-100">Criar</button>
+                <button class="btn btn-success btn-lg w-100 btn-soft">
+                    Criar
+                </button>
             </div>
         </form>
     </div>
-    </div>
+</div>
 {% endif %}
 
-<table class="table table-bordered table-striped align-middle">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Graduação</th>
-            <th>Subunidade</th>
-            <th>Ativo</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for m in militares %}
-        <tr>
-            <td>{{ m.id }}</td>
-            <td>{{ m.nome }}</td>
-            <td>{{ m.get_graduacao_display }}</td>
-            <td>{{ m.subunidade }}</td>
-            <td>
-                {% if m.ativo %}
-                <span class="badge bg-success">Ativo</span>
-                {% else %}
-                <span class="badge bg-danger">Inativo</span>
-                {% endif %}
-            </td>
-            <td>
-                {% if can_manage %}
-                <details>
-                    <summary class="btn btn-sm btn-outline-secondary">Editar</summary>
-                    <form method="post" action="{% url 'api_militar_editar' m.id %}" class="mt-2">
-                        {% csrf_token %}
-                        <div class="row g-2">
-                            <div class="col-md-3">
-                                <input type="text" name="nome" class="form-control" value="{{ m.nome }}" required>
-                            </div>
-                            <div class="col-md-3">
-                                <select name="graduacao" class="form-select">
-                                    {% for code,label in graduacoes %}
-                                        <option value="{{ code }}" {% if code == m.graduacao %}selected{% endif %}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <input type="text" name="subunidade" class="form-control" value="{{ m.subunidade }}">
-                            </div>
-                            <div class="col-md-2 form-check">
-                                <input type="checkbox" class="form-check-input" id="ativo_{{ m.id }}" name="ativo" {% if m.ativo %}checked{% endif %}>
-                                <label class="form-check-label" for="ativo_{{ m.id }}">Ativo</label>
-                            </div>
-                            <div class="col-md-1">
-                                <button class="btn btn-sm btn-primary w-100">Salvar</button>
-                            </div>
-                        </div>
-                    </form>
-                </details>
-                <form method="post" action="{% url 'api_militar_excluir' m.id %}" class="d-inline">
-                    {% csrf_token %}
-                    <button class="btn btn-sm btn-outline-danger">Excluir</button>
-                </form>
-                {% endif %}
-                {% if can_reports %}
-                <a href="{% url 'historico_militar' m.id %}" class="btn btn-sm btn-outline-secondary">Histórico</a>
-                {% else %}
-                —
-                {% endif %}
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="6" class="text-center">Nenhum militar encontrado</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 
-<a href="{% url 'dashboard' %}" class="btn btn-secondary">↩ Voltar ao Dashboard</a>
+<!-- LISTA -->
+<div class="card card-modern">
+    <div class="card-header bg-transparent border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <h5 class="section-title text-secondary">
+            <i class="fas fa-list me-2"></i>Lista de Militares
+        </h5>
+        <span class="badge badge-modern bg-secondary text-white">
+            {{ militares|length }} registro{{ militares|length|pluralize:"s" }}
+        </span>
+    </div>
 
-</body>
-</html>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-modern mb-0">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3">ID</th>
+                        <th class="py-3">Nome</th>
+                        <th class="py-3">Graduação</th>
+                        <th class="py-3">Subunidade</th>
+                        <th class="py-3">Status</th>
+                        <th class="py-3 text-end">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for m in militares %}
+                    <tr>
+                        <td class="px-4 py-3 text-muted">{{ m.id }}</td>
+                        <td class="py-3 fw-semibold">{{ m.nome }}</td>
+
+                        <td class="py-3">
+                            <span class="badge badge-modern bg-light border text-dark">
+                                {{ m.get_graduacao_display }}
+                            </span>
+                        </td>
+
+                        <td class="py-3">{{ m.subunidade|default:"—" }}</td>
+
+                        <td class="py-3">
+                            {% if m.ativo %}
+                                <span class="badge badge-modern status-ativo">
+                                    Ativo
+                                </span>
+                            {% else %}
+                                <span class="badge badge-modern status-inativo">
+                                    Inativo
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="py-3 text-end">
+                            {% if can_manage %}
+                            <div class="d-inline-flex gap-2">
+                                <button class="btn btn-sm btn-outline-secondary btn-soft"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#edit-{{ m.id }}">
+                                    Editar
+                                </button>
+
+                                <form method="post"
+                                      action="{% url 'api_militar_excluir' m.id %}"
+                                      onsubmit="return confirm('Tem certeza?');">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger btn-soft">
+                                        Excluir
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- EDIT -->
+                    <tr>
+                        <td colspan="6" class="p-0 border-0">
+                            <div class="collapse" id="edit-{{ m.id }}">
+                                <div class="p-4 edit-area">
+
+                                    <form method="post"
+                                          action="{% url 'api_militar_editar' m.id %}"
+                                          class="row g-3 align-items-end">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="_method" value="PUT">
+
+                                        <div class="col-md-4">
+                                            <label class="label-strong">Nome</label>
+                                            <input type="text" name="nome"
+                                                   value="{{ m.nome }}"
+                                                   class="form-control">
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="label-strong">Graduação</label>
+                                            <select name="graduacao"
+                                                    class="form-select">
+                                                {% for code,label in graduacoes %}
+                                                    <option value="{{ code }}"
+                                                    {% if code == m.graduacao %}selected{% endif %}>
+                                                        {{ label }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="label-strong">Subunidade</label>
+                                            <input type="text"
+                                                   name="subunidade"
+                                                   value="{{ m.subunidade }}"
+                                                   class="form-control">
+                                        </div>
+
+                                        <!-- ATIVO MAIS VISÍVEL NO EDIT -->
+                                        <div class="col-md-1">
+                                            <label class="label-strong">Ativo</label><br>
+                                            <input type="checkbox"
+                                                   name="ativo"
+                                                   style="transform: scale(1.2);"
+                                                   {% if m.ativo %}checked{% endif %}>
+                                        </div>
+
+                                        <div class="col-md-1">
+                                            <button type="submit"
+                                                    class="btn btn-secondary w-100 btn-soft">
+                                                Salvar
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            Nenhum militar encontrado
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<div class="mt-4">
+    <a href="{% url 'dashboard' %}"
+       class="btn btn-outline-secondary btn-soft">
+        ← Voltar ao Dashboard
+    </a>
+</div>
+
+{% endblock %}

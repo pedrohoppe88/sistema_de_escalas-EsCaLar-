@@ -3,181 +3,299 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard - Sistema de Sargenteação</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-size: 0.95rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #1e293b;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .sidebar .nav-link {
+            color: #cbd5e1;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        /* Cards */
+        .card-modern {
+            border: none;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+        }
+
+        .card-modern:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .stat-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        .stat-number {
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        /* Quick buttons */
+        .quick-btn {
+            border-radius: 12px;
+            padding: 18px;
+            transition: all 0.2s ease;
+        }
+
+        .quick-btn:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Section spacing */
+        .section-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* Mobile sidebar */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                z-index: 1000;
+                width: 250px;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container-fluid mt-4">
+<div class="container-fluid">
     <div class="row">
+
         <!-- Sidebar -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-bars"></i> Menu</h5>
-                </div>
-                <div class="list-group list-group-flush">
-                    <a href="{% url 'dashboard' %}" class="list-group-item list-group-item-action active">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                    <a href="{% url 'ver_efetivo' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-users"></i> Efetivo do Dia
-                    </a>
-                    <a href="{% url 'registrar_servico' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-plus-circle"></i> Registrar Serviço
-                    </a>
-                    <a href="{% url 'aditamento_pdf' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-file-pdf"></i> Gerar Aditamento
-                    </a>
-                    {% if request.user.groups.all.0.name == 'ADMIN' %}
-                    <a href="{% url 'admin_user_management' %}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-cog"></i> Gerenciar Usuários
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'logout' %}" class="list-group-item list-group-item-action text-danger">
-                        <i class="fas fa-sign-out-alt"></i> Sair
-                    </a>
-                </div>
-            </div>
-        </div>
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar p-3">
+            <h5 class="text-white mb-4">
+                <i class="fas fa-shield-alt"></i> Sargenteação
+            </h5>
 
-        <!-- Main Content -->
-        <div class="col-md-9">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard' %}" class="nav-link active">
+                        <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'ver_efetivo' %}" class="nav-link">
+                        <i class="fas fa-users me-2"></i> Efetivo do Dia
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'registrar_servico' %}" class="nav-link">
+                        <i class="fas fa-plus-circle me-2"></i> Registrar Serviço
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'aditamento_pdf' %}" class="nav-link">
+                        <i class="fas fa-file-pdf me-2"></i> Gerar Aditamento
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'estatisticas_servico' %}" class="nav-link">
+                        <i class="fas fa-chart-bar me-2"></i> Estatísticas
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'editar_servicos' %}" class="nav-link">
+                        <i class="fas fa-pen-to-square me-2"></i> Editar Serviços
+                    </a>
+                </li>
+                {% if request.user.groups.all.0.name == 'ADMIN' %}
+                <li>
+                    <a href="{% url 'admin_user_management' %}" class="nav-link">
+                        <i class="fas fa-user-cog me-2"></i> Usuários
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="{% url 'logout' %}" class="nav-link text-danger">
+                        <i class="fas fa-sign-out-alt me-2"></i> Sair
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
-                <small class="text-muted">Hoje: {{ hoje|date:"d/m/Y" }}</small>
+                <div>
+                    <h3 class="fw-bold">Dashboard</h3>
+                    <small class="text-muted">Hoje: {{ hoje|date:"d/m/Y" }}</small>
+                </div>
+                <button class="btn btn-dark d-md-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
 
-            <!-- Statistics Cards -->
-            <div class="row mb-4">
+            <!-- Stats -->
+            <div class="row g-4 mb-4">
                 <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h5 class="card-title">Total Militares</h5>
-                                    <h2>{{ total_militares }}</h2>
-                                </div>
-                                <i class="fas fa-users fa-2x"></i>
-                            </div>
-                        </div>
+                    <div class="card card-modern p-3 bg-primary text-white">
+                        <div class="stat-title">Total Militares</div>
+                        <div class="stat-number">{{ total_militares }}</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h5 class="card-title">Aptos Hoje</h5>
-                                    <h2>{{ militares_aptos }}</h2>
-                                </div>
-                                <i class="fas fa-check-circle fa-2x"></i>
-                            </div>
-                        </div>
+                    <div class="card card-modern p-3 bg-success text-white">
+                        <div class="stat-title">Aptos Hoje</div>
+                        <div class="stat-number">{{ militares_aptos }}</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h5 class="card-title">Afastados</h5>
-                                    <h2>{{ militares_afastados }}</h2>
-                                </div>
-                                <i class="fas fa-exclamation-triangle fa-2x"></i>
-                            </div>
-                        </div>
+                    <div class="card card-modern p-3 bg-warning text-dark">
+                        <div class="stat-title">Afastados</div>
+                        <div class="stat-number">{{ militares_afastados }}</div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h5 class="card-title">Serviços Hoje</h5>
-                                    <h2>{{ servicos_hoje }}</h2>
-                                </div>
-                                <i class="fas fa-calendar-check fa-2x"></i>
-                            </div>
-                        </div>
+                    <div class="card card-modern p-3 bg-info text-white">
+                        <div class="stat-title">Serviços Hoje</div>
+                        <div class="stat-number">{{ servicos_hoje }}</div>
                     </div>
                 </div>
             </div>
 
-            
-
-            <!-- Quick Actions -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5><i class="fas fa-bolt"></i> Ações Rápidas</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3 mb-3">
-                                    <a href="{% url 'ver_efetivo' %}" class="btn btn-outline-primary btn-lg w-100">
-                                        <i class="fas fa-users"></i><br>
-                                        Ver Efetivo
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="{% url 'registrar_servico' %}" class="btn btn-outline-success btn-lg w-100">
-                                        <i class="fas fa-plus-circle"></i><br>
-                                        Registrar Serviço
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="{% url 'aditamento_pdf' %}" class="btn btn-outline-info btn-lg w-100">
-                                        <i class="fas fa-file-pdf"></i><br>
-                                        Gerar PDF
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="{% url 'estatisticas_servico' %}" class="btn btn-outline-warning btn-lg w-100">
-                                        <i class="fas fa-chart-bar"></i><br>
-                                        Estatísticas
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="{% url 'editar_servicos' %}" class="btn btn-outline-secondary btn-lg w-100">
-                                        <i class="fas fa-pen-to-square"></i><br>
-                                        Editar Serviços
-                                    </a>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <a href="{% url 'admin_user_management' %}" class="btn btn-outline-secondary btn-lg w-100">
-                                        <i class="fas fa-user-cog"></i><br>
-                                        Gerenciar Usuários
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Ações Rápidas -->
+            <div class="card card-modern mb-4 p-4">
+                <div class="section-title mb-3">
+                    <i class="fas fa-bolt me-2"></i> Ações Rápidas
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'ver_efetivo' %}" class="btn btn-outline-primary w-100 quick-btn">
+                            <i class="fas fa-users fa-lg mb-2"></i><br>
+                            Ver Efetivo
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'registrar_servico' %}" class="btn btn-outline-success w-100 quick-btn">
+                            <i class="fas fa-plus-circle fa-lg mb-2"></i><br>
+                            Registrar Serviço
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'aditamento_pdf' %}" class="btn btn-outline-info w-100 quick-btn">
+                            <i class="fas fa-file-pdf fa-lg mb-2"></i><br>
+                            Gerar PDF
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'estatisticas_servico' %}" class="btn btn-outline-warning w-100 quick-btn">
+                            <i class="fas fa-chart-bar fa-lg mb-2"></i><br>
+                            Estatísticas
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Recent Activity -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5><i class="fas fa-clock"></i> Atividades Recentes</h5>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted">Funcionalidade em desenvolvimento...</p>
-                            <ul class="list-unstyled">
-                                <li><i class="fas fa-circle text-success"></i> Sistema inicializado</li>
-                                <li><i class="fas fa-circle text-info"></i> Dashboard criado</li>
-                            </ul>
-                        </div>
+            <!-- Calendário -->
+            <div class="card card-modern mb-4 p-4">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="section-title">
+                        <i class="fas fa-calendar me-2"></i> Calendário de Serviços
                     </div>
+                    <a href="{% url 'calendario_servicos' %}" class="btn btn-sm btn-outline-primary">
+                        Tela Cheia
+                    </a>
+                </div>
+                <div id="dashboard-calendar"></div>
+            </div>
+
+            <!-- Atividades -->
+            <div class="card card-modern p-4">
+                <div class="section-title mb-3">
+                    <i class="fas fa-clock me-2"></i> Atividades Recentes
+                </div>
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p>Nenhuma atividade recente registrada.</p>
                 </div>
             </div>
-        </div>
+
+        </main>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/pt-br.global.min.js"></script>
+
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('show');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('dashboard-calendar');
+
+    if (calendarEl) {
+        calendarEl.innerHTML = "<div class='text-center p-4'><div class='spinner-border'></div></div>";
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'pt-br',
+            height: 'auto',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            events: function(info, successCallback, failureCallback) {
+                const params = new URLSearchParams();
+                params.set('start', info.startStr);
+                params.set('end', info.endStr);
+
+                fetch(`{% url 'calendario_events' %}?` + params.toString())
+                    .then(r => r.json())
+                    .then(data => successCallback(data))
+                    .catch(err => failureCallback(err));
+            },
+            eventClick: function(info) {
+                const militarId = info.event.extendedProps?.militarId;
+                if (militarId) {
+                    window.location.href = `{% url 'historico_militar' 0 %}`.replace('/0/', '/' + militarId + '/');
+                }
+            }
+        });
+
+        calendar.render();
+    }
+});
+</script>
+
 </body>
 </html>

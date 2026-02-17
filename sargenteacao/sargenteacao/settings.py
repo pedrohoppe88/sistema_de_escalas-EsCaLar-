@@ -149,3 +149,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
+
+# CSRF Settings - Configurações de Proteção CSRF
+CSRF_USE_SESSIONS = True
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 dias
+CSRF_COOKIE_NAME = 'csrftoken'
+
+# Trusted origins for CSRF (adicione seu domínio em produção)
+CSRF_TRUSTED_ORIGINS = []
