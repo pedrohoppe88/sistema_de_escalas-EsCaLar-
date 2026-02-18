@@ -30,8 +30,6 @@ O Sistema de Sargenteação é uma aplicação web desenvolvida em Django para a
 
 ### Gestão de Afastamentos
 - Registro de afastamentos (Férias, Licença, Dispensa, Dispensa Médica)
-- Período de início e fim
-- Observações adicionais
 
 ### Dashboard e Estatísticas
 - Visualização do efetivo do dia
