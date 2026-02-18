@@ -1,6 +1,6 @@
 # Sistema de Sargenteação
 
-Sistema de gestão militar para controle de serviços, efetivos e afastamentos da troops.
+Sistema de gestão com regras de negócio complexas, API REST com autenticação JWT, geração de relatórios em PDF, testes automatizados e containerização com Docker.
 
 ## 📖 Sobre o Projeto
 
